@@ -523,3 +523,327 @@ PxWebApi 2.0 beta (for 2020-24, Jorbruk, skogbruk, fiske samt sjøfart): https:/
 }
 ```
 </details>
+
+# Kostnadsindex for innenriks sjøfart
+Se [tabell for relativ kostnadsutvikling per kvartal](https://www.ssb.no/transport-og-reiseliv/sjotransport/statistikk/kostnadsindeks-for-innenriks-sjofart)
+og [kostnadsindeks for innenriks sjøfart-drivstoff](https://www.ssb.no/statbank/table/11585/tableViewLayout1/).
+
+![Kostnadsindeks innenriks sjøfart](image/kostnadsindeks-sjoefart.JPG)
+## API kall
+
+URL: https://data.ssb.no/api/v0/no/table/11585/
+
+JSON-query:
+```
+{
+  "query": [
+    {
+      "code": "TotalDelindeks",
+      "selection": {
+        "filter": "item",
+        "values": [
+          "DRV"
+        ]
+      }
+    }
+  ],
+  "response": {
+    "format": "json-stat2"
+  }
+}
+```
+PxWebApi 2.0 beta: https://data.ssb.no/api/pxwebapi/v2-beta/tables/11585/data?lang=no&valueCodes[TotalDelindeks]=DRV&valueCodes[Tid]=2009K2,2009K3,2009K4,2010K1,2010K2,2010K3,2010K4,2011K1,2011K2,2011K3,2011K4,2012K1,2012K2,2012K3,2012K4,2013K1,2013K2,2013K3,2013K4,2014K1,2014K2,2014K3,2014K4,2015K1,2015K2,2015K3,2015K4,2016K1,2016K2,2016K3,2016K4,2017K1,2017K2,2017K3,2017K4,2018K1,2018K2,2018K3,2018K4,2019K1,2019K2,2019K3,2019K4,2020K1,2020K2,2020K3,2020K4,2021K1,2021K2,2021K3,2021K4,2022K1,2022K2,2022K3,2022K4,2023K1,2023K2,2023K3,2023K4,2024K1,2024K2,2024K3,2024K4,2025K1&valueCodes[ContentsCode]=Kostnadsindeks,EndringKvartal,EndringAr
+
+<details>
+  <summary>Click to expand PxWebApi response (json-stat2):</summary>
+
+```
+{
+  "version": "2.0",
+  "class": "dataset",
+  "label": "11585: Innenriks sjøfart, etter total/delindeks innenriks sjøfart og kvartal",
+  "source": "Statistisk sentralbyrå",
+  "updated": "2025-06-12T06:00:00Z",
+  "note": [
+    ".. = Tallgrunnlag mangler. Tall er ikke kommet inn i våre databaser eller er for usikre til å publiseres."
+  ],
+  "role": {
+    "time": [
+      "Tid"
+    ],
+    "metric": [
+      "ContentsCode"
+    ]
+  },
+  "id": [
+    "TotalDelindeks",
+    "ContentsCode",
+    "Tid"
+  ],
+  "size": [1, 3, 64],
+  "dimension": {
+    "TotalDelindeks": {
+      "label": "total/delindeks innenriks sjøfart",
+      "category": {
+        "index": {
+          "DRV": 0
+        },
+        "label": {
+          "DRV": "Delindeks, kostnad - Drivstoff"
+        }
+      },
+      "extension": {
+        "elimination": false,
+        "show": "value"
+      }
+    },
+    "ContentsCode": {
+      "label": "statistikkvariabel",
+      "category": {
+        "index": {
+          "Kostnadsindeks": 0,
+          "EndringKvartal": 1,
+          "EndringAr": 2
+        },
+        "label": {
+          "Kostnadsindeks": "Kostnadsindeks",
+          "EndringKvartal": "Endring siste kvartal (prosent)",
+          "EndringAr": "Endring siste år (prosent)"
+        },
+        "note": {
+          "EndringKvartal": [
+            "Endring mot forrige kvartal"
+          ],
+          "EndringAr": [
+            "Endring mot samme kvartal forrige år"
+          ]
+        },
+        "unit": {
+          "Kostnadsindeks": {
+            "base": "indeks",
+            "decimals": 1
+          },
+          "EndringKvartal": {
+            "base": "prosent",
+            "decimals": 2
+          },
+          "EndringAr": {
+            "base": "prosent",
+            "decimals": 2
+          }
+        }
+      },
+      "extension": {
+        "elimination": false,
+        "refperiod": {
+          "Kostnadsindeks": "31.12.",
+          "EndringKvartal": "31.12.",
+          "EndringAr": "31.12."
+        },
+        "show": "value",
+        "measuringType": {
+          "Kostnadsindeks": "Average",
+          "EndringKvartal": "Average",
+          "EndringAr": "Average"
+        },
+        "priceType": {
+          "Kostnadsindeks": "NotApplicable",
+          "EndringKvartal": "NotApplicable",
+          "EndringAr": "NotApplicable"
+        },
+        "adjustment": {
+          "Kostnadsindeks": "None",
+          "EndringKvartal": "None",
+          "EndringAr": "None"
+        },
+        "basePeriod": {
+          "Kostnadsindeks": "4. kvartal 2024"
+        }
+      }
+    },
+    "Tid": {
+      "label": "kvartal",
+      "category": {
+        "index": {
+          "2009K2": 0,
+          "2009K3": 1,
+          "2009K4": 2,
+          "2010K1": 3,
+          "2010K2": 4,
+          "2010K3": 5,
+          "2010K4": 6,
+          "2011K1": 7,
+          "2011K2": 8,
+          "2011K3": 9,
+          "2011K4": 10,
+          "2012K1": 11,
+          "2012K2": 12,
+          "2012K3": 13,
+          "2012K4": 14,
+          "2013K1": 15,
+          "2013K2": 16,
+          "2013K3": 17,
+          "2013K4": 18,
+          "2014K1": 19,
+          "2014K2": 20,
+          "2014K3": 21,
+          "2014K4": 22,
+          "2015K1": 23,
+          "2015K2": 24,
+          "2015K3": 25,
+          "2015K4": 26,
+          "2016K1": 27,
+          "2016K2": 28,
+          "2016K3": 29,
+          "2016K4": 30,
+          "2017K1": 31,
+          "2017K2": 32,
+          "2017K3": 33,
+          "2017K4": 34,
+          "2018K1": 35,
+          "2018K2": 36,
+          "2018K3": 37,
+          "2018K4": 38,
+          "2019K1": 39,
+          "2019K2": 40,
+          "2019K3": 41,
+          "2019K4": 42,
+          "2020K1": 43,
+          "2020K2": 44,
+          "2020K3": 45,
+          "2020K4": 46,
+          "2021K1": 47,
+          "2021K2": 48,
+          "2021K3": 49,
+          "2021K4": 50,
+          "2022K1": 51,
+          "2022K2": 52,
+          "2022K3": 53,
+          "2022K4": 54,
+          "2023K1": 55,
+          "2023K2": 56,
+          "2023K3": 57,
+          "2023K4": 58,
+          "2024K1": 59,
+          "2024K2": 60,
+          "2024K3": 61,
+          "2024K4": 62,
+          "2025K1": 63
+        },
+        "label": {
+          "2009K2": "2009K2",
+          "2009K3": "2009K3",
+          "2009K4": "2009K4",
+          "2010K1": "2010K1",
+          "2010K2": "2010K2",
+          "2010K3": "2010K3",
+          "2010K4": "2010K4",
+          "2011K1": "2011K1",
+          "2011K2": "2011K2",
+          "2011K3": "2011K3",
+          "2011K4": "2011K4",
+          "2012K1": "2012K1",
+          "2012K2": "2012K2",
+          "2012K3": "2012K3",
+          "2012K4": "2012K4",
+          "2013K1": "2013K1",
+          "2013K2": "2013K2",
+          "2013K3": "2013K3",
+          "2013K4": "2013K4",
+          "2014K1": "2014K1",
+          "2014K2": "2014K2",
+          "2014K3": "2014K3",
+          "2014K4": "2014K4",
+          "2015K1": "2015K1",
+          "2015K2": "2015K2",
+          "2015K3": "2015K3",
+          "2015K4": "2015K4",
+          "2016K1": "2016K1",
+          "2016K2": "2016K2",
+          "2016K3": "2016K3",
+          "2016K4": "2016K4",
+          "2017K1": "2017K1",
+          "2017K2": "2017K2",
+          "2017K3": "2017K3",
+          "2017K4": "2017K4",
+          "2018K1": "2018K1",
+          "2018K2": "2018K2",
+          "2018K3": "2018K3",
+          "2018K4": "2018K4",
+          "2019K1": "2019K1",
+          "2019K2": "2019K2",
+          "2019K3": "2019K3",
+          "2019K4": "2019K4",
+          "2020K1": "2020K1",
+          "2020K2": "2020K2",
+          "2020K3": "2020K3",
+          "2020K4": "2020K4",
+          "2021K1": "2021K1",
+          "2021K2": "2021K2",
+          "2021K3": "2021K3",
+          "2021K4": "2021K4",
+          "2022K1": "2022K1",
+          "2022K2": "2022K2",
+          "2022K3": "2022K3",
+          "2022K4": "2022K4",
+          "2023K1": "2023K1",
+          "2023K2": "2023K2",
+          "2023K3": "2023K3",
+          "2023K4": "2023K4",
+          "2024K1": "2024K1",
+          "2024K2": "2024K2",
+          "2024K3": "2024K3",
+          "2024K4": "2024K4",
+          "2025K1": "2025K1"
+        }
+      },
+      "extension": {
+        "elimination": false,
+        "show": "code"
+      }
+    }
+  },
+  "extension": {
+    "px": {
+      "infofile": "None",
+      "tableid": "11585",
+      "decimals": 1,
+      "official-statistics": true,
+      "aggregallowed": false,
+      "copyright": false,
+      "language": "no",
+      "contents": "11585: Innenriks sjøfart,",
+      "descriptiondefault": false,
+      "heading": [
+        "ContentsCode",
+        "Tid"
+      ],
+      "stub": [
+        "TotalDelindeks"
+      ],
+      "matrix": "Kostnadsindeks",
+      "subject-code": "tr",
+      "subject-area": "Transport og reiseliv"
+    },
+    "discontinued": null,
+    "contact": [
+      {
+        "name": "Henrik Eli Almaas",
+        "organization": "Statistisk sentralbyrå",
+        "phone": "97 78 89 27",
+        "mail": "ike@ssb.no",
+        "raw": "Henrik Eli Almaas, Statistisk sentralbyrå# +47 97 78 89 27#ike@ssb.no"
+      }
+    ]
+  },
+  "value": [30.4, 31.2, 31.9, 33.6, 36.7, 36.5, 38.9, 44.6, 46.9, 46.1, 48, 51, 48.4, 49.5, 47.6, 47.6, 45.4, 48.4, 49.2, 48.4, 46.9, 46.5, 41.6, 35.3, 38.2, 34.6, 30.8, 25, 31.2, 34.4, 37.8, 44.1, 42.2, 40.8, 48.1, 50.3, 54.4, 58.5, 59.1, 55.6, 57.6, 56.9, 59.1, 59.3, 44.7, 45.4, 46.8, 54.2, 57, 62.3, 68.2, 83.1, 107.8, 111.7, 107.4, 104, 96.3, 102.5, 111.5, 103.9, 102.6, 98.6, 100, 108.7, null, 2.5, 2.4, 5.3, 9.1, -0.6, 6.7, 14.5, 5, -1.6, 4.1, 6.2, -5.1, 2.3, -3.9, 0, -4.7, 6.8, 1.5, -1.5, -3.2, -0.7, -10.6, -15.1, 8.1, -9.5, -10.8, -18.8, 24.5, 10.5, 9.7, 16.8, -4.5, -3.2, 17.9, 4.7, 8.1, 7.5, 0.9, -5.9, 3.7, -1.3, 3.8, 0.5, -24.6, 1.4, 3.2, 15.9, 5.2, 9.3, 9.4, 21.8, 29.7, 3.6, -3.8, -3.1, -7.4, 6.4, 8.8, -6.9, -1.2, -3.9, 1.5, 8.74, null, null, null, null, 20.6, 17.1, 22, 32.7, 27.7, 26.4, 23.3, 14.4, 3.3, 7.4, -0.9, -6.7, -6.3, -2.2, 3.3, 1.7, 3.3, -3.9, -15.4, -27, -18.5, -25.7, -25.9, -29.2, -18.4, -0.4, 22.6, 76.3, 35.2, 18.4, 27.3, 14.1, 29.1, 43.5, 22.8, 10.4, 5.9, -2.8, 0, 6.7, -22.4, -20.3, -20.8, -8.6, 27.4, 37.4, 45.8, 53.2, 89, 79.1, 57.4, 25.2, -10.6, -8.2, 3.9, -0.1, 6.5, -3.9, -10.3, 4.66],
+  "status": {
+    "64": "..",
+    "128": "..",
+    "129": "..",
+    "130": "..",
+    "131": ".."
+  }
+}
+```
+</details>
