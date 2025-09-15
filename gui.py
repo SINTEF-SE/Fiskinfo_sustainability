@@ -197,9 +197,14 @@ class MainWindow(QMainWindow):
 
         #### Add button actions to KPI menu ###############
         # Action for KPI-01, EEOI calculations
-        kpi_01_action = QAction(QIcon("AppIcons/cross-circle-frame.png"), "&KPI_01", self)
+        kpi_01_action = QAction(QIcon("AppIcons/cross-circle-frame.png"), "&KPI_01 EEIO", self)
         kpi_01_action.triggered.connect(self.kpi01_button_clicked)
         kpi_menu.addAction(kpi_01_action)
+
+        # Action for KPI-02, FUI calculations
+        kpi_02_action = QAction(QIcon("AppIcons/cross-circle-frame.png"), "&KPI_02 FUI", self)
+        kpi_02_action.triggered.connect(self.kpi02_button_clicked)
+        kpi_menu.addAction(kpi_02_action)
 
         # Action for KPI-05 Fangst og fangstverdi per år
         kpi_05_action = QAction(QIcon("AppIcons/cross-circle-frame.png"), "&KPI_05", self)
@@ -248,7 +253,9 @@ class MainWindow(QMainWindow):
         ep.get_request(ep.gear_main_groups, show = self.showOutput.isChecked())
 
     def getVessels_button_clicked(self):
-        ep.get_request(ep.vessels, show = self.showOutput.isChecked())
+        jsonData = ep.get_request(ep.vessels, show = self.showOutput.isChecked())
+    
+        #jsonToCsv(jsonData, "csvTest.csv")
 
     def getVesselsFuel_button_clicked(self):
         ep.get_request(ep.fuel, self.startDateEdit.date(), self.stopDateEdit.date(), show = self.showOutput.isChecked())
@@ -305,11 +312,20 @@ class MainWindow(QMainWindow):
         
     def kpi01_button_clicked(self):
         # Produce graphics and output for EEOI
-        kpi_01(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        dateArray = getDatesArray(self.stopDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        print (dateArray)
+        kpi_01(self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), dateArray)
+
+    def kpi02_button_clicked(self):
+        # Produce graphics and output for FUI
+        print()
+       # kpi_02(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
+
 
     def kpi05_button_clicked(self):
         # Produce graphics and output for annual Catch and catch value 
-        kpi_05(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        print()
+       # kpi_05(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
 
 
     def closeEvent(self, event):

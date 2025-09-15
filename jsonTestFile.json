@@ -1,0 +1,74 @@
+[
+    {
+        "type": "EEOI",
+        "vesselName": "Gadus  Njord",
+        "callSign": "",
+        "numberOfVessels": 1,
+        "specie": "",
+        "aggregatedMonths": 3,
+        "periods": 4,
+        "dataArray": [
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": "eeoi"
+            },
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": 1.1226797796904882
+            },
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": 1.0412065407966742
+            },
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": 0.337338567602052
+            },
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": 0.3330156729291296
+            }
+        ]
+    },
+    {
+        "type": "EEOI",
+        "vesselName": "Reference Fleet",
+        "callSign": "",
+        "numberOfVessels": 128,
+        "specie": "",
+        "aggregatedMonths": 3,
+        "periods": 4,
+        "dataArray": [
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": "avEeoi"
+            },
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": 0.6353573369466916
+            },
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": 0.8654299393184214
+            },
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": 0.4433194329374303
+            },
+            {
+                "startDate": "01-12-2025",
+                "endDate": "01-12-2025",
+                "value": 0.701544498192151
+            }
+        ]
+    }
+]

@@ -16,6 +16,7 @@ base_url = 'https://api.dev.datafangst.orcalabs.no/'
 #### input data to request parameters ####################
 ## My boat
 fiskdirId = 2013063493  # Gadus Njord
+fiskdirIdGroup = [2013063493, 1999001513, 2011054408, 2018101213, 2000013339]    # Nordland Havfiske
 
 # Vessel group
 allVesselGroups = ["Unknown", "UnderEleven", "ElevenToFifteen", "FifteenToTwentyOne", "TwentyTwoToTwentyEight", "TwentyEightAndAbove"]
@@ -55,6 +56,8 @@ average = 'v1.0/trip/benchmarks/average'
 trip_benchmarks = 'v1.0/trip/benchmarks'
 trips = 'v1.0/trips'
 avTripBench = 'v1.0/trip/benchmarks/average'
+fui = 'v1.0/trip/benchmarks/fui'
+av_fui = 'v1.0/trip/benchmarks/average_fui'
 
 ## HAUL
 haul = 'v1.0/hauls'
@@ -81,7 +84,8 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, limit, offset,
         if specG != "": params['speciesGroupIds[]'] = specG
     else:
         if lengthG != "": params["lengthGroup"] = lengthG
-        if myVessel: params["vesselIds[]"] = fiskdirId
+        if myVessel: params["vesselIds[]"] = fiskdirId 
+        else: params["vesselIds[]"] = fiskdirIdGroup
         if gearG != "": params['gearGroups[]'] = gearG
         if specG != "": params['speciesGroupId'] = specG
 

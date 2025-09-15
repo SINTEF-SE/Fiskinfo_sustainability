@@ -4,16 +4,48 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
-def sliWin(eDate, span, periods):  
-        endDateList = []          # holds the end dates for all requests
+def getDatesArray(eDate, span, periods):  
+        endDateArray = []          # holds the end dates for all requests
+        startDateArray = []
+        dateArray = []
 
         for m in reversed(range(0,periods)):
-                endDateList.append(eDate.addMonths(-m*span))
+                endDateArray.append(eDate.addMonths(-m*span))
 
-        #print(endDateList)   
-        return endDateList
+        for d in endDateArray:
+                startDateArray.append(d.addMonths(-span))   
 
-def plot(x, y1, y2, title, xlabel, ylabel):
+        #print(endDateList) 
+
+        dateArray.append(startDateArray)
+        dateArray.append(endDateArray)  
+
+        return dateArray
+
+def monthsBetweenQdates(start_date, end_date) -> int:
+    """
+    Calculates the number of calendar months between two QDate objects.
+    This method provides a more accurate count of full and partial months spanned.
+    """
+    if start_date > end_date:
+        start_date, end_date = end_date, start_date # Ensure start_date is earlier
+
+    months = 0
+    current_date = start_date # Create a mutable copy
+
+    while current_date <= end_date:
+        months += 1
+        current_date = current_date.addMonths(1)
+        # Handle cases where addMonths might jump past the end_date due to day differences
+        if current_date > end_date and current_date.day() != end_date.day() and current_date.month() == end_date.month():
+            # If we've passed the end_date but are in the same month, we still count that month
+            break 
+    return months -1 # Subtract 1 because the loop counts the starting month as well
+
+
+def plot(x, y11, y21, title, xlabel, ylabel):
+        y1 = y11[1: len(y11)]
+        y2 = y21[1: len(y21)]
         width = 0.25
         dx = np.arange(len(x))
         xT = [n.toPython() for n in x]
@@ -66,3 +98,4 @@ def findMainSpecie(dict):
                 
        # print (idList)
         return idList
+

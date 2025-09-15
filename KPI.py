@@ -1,22 +1,79 @@
 from utility import*
 import api_requests as ep
 from collections import Counter
+import reports as r
 
-def kpi_01(eDate, lengthG, gearG, specG, span, periods):
+def kpi_01(lengthG, gearG, specG, dateArray):
+    # Get Norwegian name of lenght group
+    norskLgroup = nlg(lengthG)
+   
+    #Calculate list of end dates for all periods
+    #dList = sliWin(eDate, span, periods)
+
+    # get eeio for all sliding windows
+    retArray = []
+    myEeoiArray = ['eeoi']
+    avEeoiArray = ['avEeoi']
+    startDateList = dateArray[0]
+    endDateList = dateArray[1]
+    m = 0
+    for sDate in startDateList:     
+        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, myVessel = True)
+        myEeoiArray.append(eeoi)
+        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, myVessel = False)
+        avEeoiArray.append(eeoi)
+        m += 1
+    entries = len(endDateList)
+    retArray.append(myEeoiArray)
+    retArray.append(avEeoiArray)
+    print('Array', retArray)
+    # Calculate start date
+   # sDate = eDate.addMonths(-span*periods)
+   
+    # Find total number of vessels in in group
+    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG = specG)
+    
+    print("myEeoi array: ", myEeoiArray)
+    print("AvEeoi array: ", avEeoiArray)
+    print ("Antall båter. ", nVessels)
+
+    jsonArray = []
+    csvArray = []
+    item = r.Output('EEOI', 'Gadus  Njord', 1, "", 3, 4, myEeoiArray)
+    data = item.createJsonItem()
+    jsonArray.append(data)
+    item.createCsvHeading(csvArray)
+    item.createCsvItem(csvArray)
+    r.createCsv(csvArray, 'csvtestFile.csv')
+
+    item = r.Output('EEOI', 'Reference Fleet', nVessels, "", 3, 4, avEeoiArray)
+    data = item.createJsonItem()
+    jsonArray.append(data)
+
+    json_data = r.createJson(jsonArray, 'jsonTestFile.json')
+   # r.jsonToCsv(json_data, 'testCSVfil.csv')
+    
+    # create title for plot
+    span = monthsBetweenQdates(startDateList[0], endDateList[0])
+    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
+    plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")
+
+
+'''def kpi_02(eDate, lengthG, gearG, specG, span, periods):
     # Get Norwegian name of lenght group
     norskLgroup = nlg(lengthG)
    
     #Calculate list of end dates for all periods
     dList = sliWin(eDate, span, periods)
 
-    # get eeio for all sliding windows
-    myEeoiArray = []
-    avEeoiArray = []
+    # get fui for all sliding windows
+    myFuiArray = []
+    avFuiArray = []
     for mDate in dList:     
-        eeoi = 1000*ep.get_request(ep.av_eeoi, mDate.addMonths(-span), mDate, lengthG = lengthG, gearG = gearG, specG = specG, myVessel = True)
-        myEeoiArray.append(eeoi)
-        eeoi = 1000*ep.get_request(ep.av_eeoi, mDate.addMonths(-span), mDate, lengthG = lengthG, gearG = gearG, specG= specG, myVessel = False)
-        avEeoiArray.append(eeoi)
+        fui = 1000*ep.get_request(ep.av_fui, mDate.addMonths(-span), mDate, lengthG = lengthG, gearG = gearG, specG = specG, myVessel = True)
+        myFuiArray.append(fui)
+        fui = 1000*ep.get_request(ep.av_fui, mDate.addMonths(-span), mDate, lengthG = lengthG, gearG = gearG, specG= specG, myVessel = False)
+        avFuiArray.append(fui)
 
     # Calculate start date
     sDate = eDate.addMonths(-span*periods)
@@ -24,13 +81,15 @@ def kpi_01(eDate, lengthG, gearG, specG, span, periods):
     # Find total number of vessels in in group
     nVessels = getTotalVessels(ep.trips, sDate, eDate, lengthG, gearG, specG = specG)
     
-    print("myEeoi array: ", myEeoiArray)
-    print("AvEeoi array: ", avEeoiArray)
+    print("myFui array: ", myFuiArray)
+    print("AvFui array: ", avFuiArray)
     print ("Antall båter. ", nVessels)
 
+    
+
     # create title for plot
-    title = "KPI-01: EEOI [g CO2 /nm] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
-    plot(dList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")
+    title = "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
+    plot(dList, myFuiArray,avFuiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "FUI")
 
 
 def kpi_05(eDate, lengthG, gearG, specG, span, periods):
@@ -71,7 +130,7 @@ def kpi_05(eDate, lengthG, gearG, specG, span, periods):
     title1 = "KPI-05: Total fangst i 1000 tonn over {months} måneder".format(months = span)
     title2 = "KPI-05: Total fangstverdi i kNOK over {months} måneder".format(months = span)
     plot(dList, myCatchArray,avCatchArray, title1, "{antall} båter i referansegruppen".format(antall = nVessels), "1000 Tonn")
-    plot(dList, myCatchValueArray,avCatchValueArray, title2, "{antall} båter i referansegruppen".format(antall = nVessels), "kNOK")
+    plot(dList, myCatchValueArray,avCatchValueArray, title2, "{antall} båter i referansegruppen".format(antall = nVessels), "kNOK")'''
 
 
 ## Utility functions  
