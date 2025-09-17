@@ -254,8 +254,9 @@ class MainWindow(QMainWindow):
 
     def getVessels_button_clicked(self):
         jsonData = ep.get_request(ep.vessels, show = self.showOutput.isChecked())
-    
-        #jsonToCsv(jsonData, "csvTest.csv")
+        if jsonData:
+            json_to_csv_by_pandas(jsonData, 'output/vessels.csv')
+            #jsonToCsv(jsonData, "csvTest.csv")
 
     def getVesselsFuel_button_clicked(self):
         ep.get_request(ep.fuel, self.startDateEdit.date(), self.stopDateEdit.date(), show = self.showOutput.isChecked())
