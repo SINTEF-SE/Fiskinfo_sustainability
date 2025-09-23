@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
         super().__init__()
        
         ## Main window
-        self.actionText=""
+        self.actionText =""
         self.getParams = ""
         self.fiskdirId = 2013063493      # Gadus Njord
         self.setWindowTitle("FiskInfo Bærekraftsmodul")
@@ -314,7 +314,7 @@ class MainWindow(QMainWindow):
 
     def bank_button_clicked(self):
         ## get start and stop dates
-        createBankReport(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        createBankReport(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
          
 
     def supplier_button_clicked(self):

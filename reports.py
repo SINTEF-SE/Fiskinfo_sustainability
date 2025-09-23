@@ -40,13 +40,19 @@ class Output():
             csvArray.append(item_line)
 
     def createCsvHeading(self, csvArray):
+                 
         header1 = ['Vessel:', self.vesselId, 'CallSign:', "", 'Specie:', self.specie, 'Aggregated months:', self.span, 'Periods:', self.periods]
         csvArray.append(header1)
         line = [""]
         csvArray.append(line)
-        header2 = ['Start date', 'End date', self.repType]
+        header2 = []
+        for array in self.dataArray:
+            header2.append(array[0])
+        
         csvArray.append(header2)
 
+
+   
 
 def jsonToCsv(json_data, csv_file):
     
@@ -77,6 +83,7 @@ def jsonToCsv(json_data, csv_file):
     print("CSV file written")
     csvf.close()
 
+
 def createJson(data, jsonFile):
     
     json_data = json.dumps(data)
@@ -98,7 +105,26 @@ def createCsv(data, csvFile):
         cw.writerows(data)
         
     
-def createBankReport(eDate, lengthG, gearG, span, periods):
-
+def createBankReport(eDate, lengthG, gearG, specG, span, periods):
+    expArray = []
     dateArray = getDatesArray(eDate, span, periods)
-    kpi_01(eDate, lengthG, gearG, span, periods)
+    for array in dateArray:
+        expArray.append(array)
+
+    eeoiArray = kpi_01(lengthG, gearG, specG, dateArray)
+    for array in eeoiArray:
+        expArray.append(array)
+
+    fuiArray = kpi_02(lengthG, gearG, specG, dateArray)
+    for array in fuiArray:
+        expArray.append(array)
+        
+    item = Output('EEOI', 'Gadus  Njord', 1, "", 3, 4, expArray)
+    print (expArray)
+    #data = item.createJsonItem()
+    csvArray = []
+    item.createCsvHeading(csvArray)
+    item.createCsvItem(csvArray)
+    r.createCsv(csvArray, 'csvtestFile.csv')
+    
+    
