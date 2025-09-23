@@ -4,6 +4,9 @@ from requests import post
 import json
 from PySide6.QtCore import QDate
 from datetime import date as dt
+import pandas as pd
+from typing import Dict, Any
+import os
 
 printout = True # Used to show debug printouts, set to false if not neccessary
 
@@ -113,16 +116,41 @@ def get_access_token():
 
     print(response.json())
 
+
+def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True) -> None:
+    """
+    Convert JSON response to CSV file using pandas DataFrame
+
+    Args:
+        json_data: JSON response data as dictionary
+        output_file: Output CSV file path/name
+        flatten: Whether to flatten nested JSON structures (default: True)
+    """
+    try:
+        # Convert JSON to DataFrame
+        df = pd.json_normalize(json_data) if flatten else pd.DataFrame(json_data)
+
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+        # Write to CSV, handle encoding for Norwegian characters
+        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        print(f"CSV file saved: {output_file}")
+
+    except Exception as e:
+        print(f"Error writing CSV file: {str(e)}")
+
+
 ### External methods ################
 
-def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = "", gearG = "", specG = "", limit = 0, offset = 0, myVessel = False, show = False ):
+def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = "", gearG = "", specG = "", limit = 0, offset = 0, myVessel = False, show = False, csvFile = ""):
     url = base_url + request_type
     header = {'accept': 'application/json'}   
     params = __getParams(request_type, sDate, eDate, lengthG, gearG, specG, limit, offset, myVessel)
     global itemDict
 
     if (printout):
-        print("Requerst URL: ", url)
+        print("Request URL: ", url)
         print("Header: ", header)
         print("Params: ", params)
 
@@ -136,6 +164,9 @@ def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = "", ge
     # If the response is JSON, parse it
     try:
         data = response.json()
+        if (data != None) and (csvFile != ""): # Store json response to CSV file if file name provided
+            json_to_pandas_csv(data, csvFile)
+
         if (isinstance(data, float)):
             if printout: print("data: ", data)
             return data

@@ -3,9 +3,6 @@ from KPI import*
 import json
 import csv
 from PySide6.QtCore import QDate
-import pandas as pd
-from typing import Dict, Any
-import os
 
 class Output():
     def __init__(self, repType, vesselId, noVessels, specie, span, periods, dataArray):
@@ -51,8 +48,6 @@ class Output():
         csvArray.append(header2)
 
 
-   
-
 def jsonToCsv(json_data, csv_file):
     
     print(json_data)
@@ -81,29 +76,6 @@ def jsonToCsv(json_data, csv_file):
 
     print("CSV file written")
     csvf.close()
-
-def json_to_csv_by_pandas(json_data: Dict[Any, Any], output_file: str, flatten: bool = True) -> None:
-    """
-    Convert JSON response to CSV file using pandas DataFrame
-
-    Args:
-        json_data: JSON response data as dictionary
-        output_file: Output CSV file path/name
-        flatten: Whether to flatten nested JSON structures (default: True)
-    """
-    try:
-        # Convert JSON to DataFrame
-        df = pd.json_normalize(json_data) if flatten else pd.DataFrame(json_data)
-
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-        # Write to CSV, handle encoding for Norwegian characters
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
-        print(f"CSV file saved: {output_file}")
-
-    except Exception as e:
-        print(f"Error writing CSV file: {str(e)}")
 
 def createJson(data, jsonFile):
     

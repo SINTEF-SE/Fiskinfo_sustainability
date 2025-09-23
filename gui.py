@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
         super().__init__()
        
         ## Main window
-        self.actionText =""
+        self.actionText=""
         self.getParams = ""
         self.fiskdirId = 2013063493      # Gadus Njord
         self.setWindowTitle("FiskInfo Bærekraftsmodul")
@@ -88,13 +88,17 @@ class MainWindow(QMainWindow):
         self.speciesCombo.addItems(ep.allSpeciesGroups)
         layout.addWidget(self.speciesCombo, 3, 1)
 
-        ## Add a show checkbox (to output results of the query)
-        self.showOutput = QCheckBox("&Vis resultat", self)
-        layout.addWidget(self.showOutput, 3, 2)
-
         ## Add a my boat checkbox (to run query on my boat only foor those endpoints that support this)
         self.myVessel = QCheckBox("Mitt fartøy", self)
-        layout.addWidget(self.myVessel, 3, 3)
+        layout.addWidget(self.myVessel, 5, 1)
+
+        ## Add a show checkbox (to output results of the query)
+        self.showOutput = QCheckBox("&Vis resultat", self)
+        layout.addWidget(self.showOutput, 5, 2)
+
+        ## Add a scsv checkbox (to output results of the query)
+        self.storeCsv = QCheckBox("&Lagre respons som CSV fil", self)
+        layout.addWidget(self.storeCsv, 5, 3)
 
         ## Add field for aggregated time period (for KPI calculations)
         aggLabel = QLabel("Aggregert tidsperiode [mnd]:")
@@ -244,46 +248,57 @@ class MainWindow(QMainWindow):
     ###########  Define button-clicked actions ################
     
     def getGear_button_clicked(self):
-        ep.get_request(ep.gear, show = self.showOutput.isChecked())
+        toCsvFile = "output/gear.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.gear, show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getGearGroups_button_clicked(self):
-        ep.get_request(ep.gear_groups, show = self.showOutput.isChecked())
+        toCsvFile = "output/gearGroups.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.gear_groups, show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getGearMainGroups_button_clicked(self):
-        ep.get_request(ep.gear_main_groups, show = self.showOutput.isChecked())
+        toCsvFile = "output/gearMainGroups.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.gear_main_groups, show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getVessels_button_clicked(self):
-        jsonData = ep.get_request(ep.vessels, show = self.showOutput.isChecked())
-        if jsonData:
-            json_to_csv_by_pandas(jsonData, 'output/vessels.csv')
-            #jsonToCsv(jsonData, "csvTest.csv")
+        toCsvFile = "output/vessels.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.vessels, show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        #if jsonData: jsonToCsv(jsonData, "csvTest.csv")
 
     def getVesselsFuel_button_clicked(self):
-        ep.get_request(ep.fuel, self.startDateEdit.date(), self.stopDateEdit.date(), show = self.showOutput.isChecked())
+        toCsvFile = "output/vesselsFuel.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.fuel, self.startDateEdit.date(), self.stopDateEdit.date(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getVesselsLiveFuel_button_clicked(self):
-        ep.get_request(ep.live_fuel, show = self.showOutput.isChecked())
+        toCsvFile = "output/vesselsLiveFuel.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.live_fuel, show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getVesselsBenchmarks_button_clicked(self):
-        ep.get_request(ep.vessel_benchmarks, show = self.showOutput.isChecked())
+        toCsvFile = "output/benchmarks.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.vessel_benchmarks, show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getUser_button_clicked(self):
-        ep.get_request(ep.user, show = self.showOutput.isChecked())
+        toCsvFile = "output/user.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.user, show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getTrips_button_clicked(self):
-        ep.get_request(ep.trips, self.startDateEdit.date(), self.stopDateEdit.date(), limit = self.limitEdit.text(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), specG = self.speciesCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked())
+        toCsvFile = "output/trips.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.trips, self.startDateEdit.date(), self.stopDateEdit.date(), limit = self.limitEdit.text(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), specG = self.speciesCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getAvTripBenchmarks_button_clicked(self):
-        ep.get_request(ep.avTripBench, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked())
+        toCsvFile = "output/avTripBenchmarks.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.avTripBench, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getEEOI_button_clicked(self):
-        ep.get_request(ep.eeoi, self.startDateEdit.date(), self.stopDateEdit.date(), show = self.showOutput.isChecked())
+        toCsvFile = "output/EEOI.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.eeoi, self.startDateEdit.date(), self.stopDateEdit.date(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getAvEEOI_button_clicked(self):
-        ep.get_request(ep.av_eeoi, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), specG = self.speciesCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked())
+        toCsvFile = "output/avEEOI.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.av_eeoi, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), specG = self.speciesCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getHaul_button_clicked(self):
-        ep.get_request(ep.haul, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked())
+        toCsvFile = "output/haul.csv" if self.storeCsv.isChecked() else ""
+        ep.get_request(ep.haul, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def auth_button_clicked(self):
         # Not implemented
