@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMainWindow, QPushButton, QToolBar, QLabel, QCheckBox, QStatusBar, QCheckBox, QGridLayout, QWidget, QDateEdit, QLineEdit, QComboBox, QSlider
+from PySide6.QtWidgets import QMainWindow, QPushButton, QToolBar, QLabel, QCheckBox, QStatusBar, QCheckBox, QGridLayout, QWidget, QDateEdit, QLineEdit, QComboBox, QSlider, QTextEdit
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtCore import*
 import api_requests as ep
@@ -18,7 +18,7 @@ class MainWindow(QMainWindow):
         self.actionText =""
         self.getParams = ""
         self.fiskdirId = 2013063493      # Gadus Njord
-        self.setWindowTitle("FiskInfo Bærekraftsmodul")
+        self.setWindowTitle("FiskInfoPlattformen Bærekraftsmodul")
         self.setFixedSize(QSize(700, 400))
         #self.setStyleSheet("background-color: lightyellow;")
         
@@ -88,16 +88,23 @@ class MainWindow(QMainWindow):
         self.speciesCombo.addItems(ep.allSpeciesGroups)
         layout.addWidget(self.speciesCombo, 3, 1)
 
+        ## Add catch locations array
+        locationLabel = QLabel("Fangstfelt:")
+        layout.addWidget(locationLabel, 3, 2)
+        self.locationText = QTextEdit("All")
+        self.locationText.setStyleSheet("QTextEdit { background-color: lightblue; color: black; }")
+        layout.addWidget(self.locationText, 3, 3)
+
         ## Add a my boat checkbox (to run query on my boat only foor those endpoints that support this)
         self.myVessel = QCheckBox("Mitt fartøy", self)
         layout.addWidget(self.myVessel, 5, 1)
 
         ## Add a show checkbox (to output results of the query)
-        self.showOutput = QCheckBox("&Vis resultat", self)
+        self.showOutput = QCheckBox("Vis resultat", self)
         layout.addWidget(self.showOutput, 5, 2)
 
         ## Add a scsv checkbox (to output results of the query)
-        self.storeCsv = QCheckBox("&Lagre respons som CSV fil", self)
+        self.storeCsv = QCheckBox("Lagre API-respons som CSV", self)
         layout.addWidget(self.storeCsv, 5, 3)
 
         ## Add field for aggregated time period (for KPI calculations)
@@ -124,7 +131,7 @@ class MainWindow(QMainWindow):
 
         ## Create menu items to toolbar
         menu = self.menuBar()
-        api_menu = menu.addMenu("&API test")
+        api_menu = menu.addMenu("&Datafangst API kall")
         auth_menu = menu.addMenu("Innlogging")
         sust_menu = menu.addMenu("Rapporter")
         pef_menu = menu.addMenu("Pef")
@@ -154,48 +161,48 @@ class MainWindow(QMainWindow):
         api_menu.addSeparator()
 
         # Vessels
-        getVessels_action = QAction(QIcon("AppIcons/bug.png"), "Get Vessels", self)
+        getVessels_action = QAction(QIcon("AppIcons/bug.png"), "&Get Vessels", self)
         getVessels_action.triggered.connect(self.getVessels_button_clicked)
         vessels_menu.addAction(getVessels_action)
 
-        getVesselsBenchmarks_action = QAction(QIcon("AppIcons/bug.png"), "Get Vessel Benchmarks", self)
+        getVesselsBenchmarks_action = QAction(QIcon("AppIcons/bug.png"), "&Get Vessel Benchmarks", self)
         getVesselsBenchmarks_action.triggered.connect(self.getVesselsBenchmarks_button_clicked)
         vessels_menu.addAction(getVesselsBenchmarks_action)
 
-        getVesselsFuel_action = QAction(QIcon("AppIcons/bug.png"), "Get Vessel Fuel", self)
+        getVesselsFuel_action = QAction(QIcon("AppIcons/bug.png"), "&Get Vessel Fuel", self)
         getVesselsFuel_action.triggered.connect(self.getVesselsFuel_button_clicked)
         vessels_menu.addAction(getVesselsFuel_action)
 
-        getVesselsLiveFuel_action = QAction(QIcon("AppIcons/bug.png"), "Get Vessel Live Fuel", self)
+        getVesselsLiveFuel_action = QAction(QIcon("AppIcons/bug.png"), "&Get Vessel Live Fuel", self)
         getVesselsLiveFuel_action.triggered.connect(self.getVesselsLiveFuel_button_clicked)
         vessels_menu.addAction(getVesselsLiveFuel_action)
 
         api_menu.addSeparator()
 
         # User
-        getUser_action = QAction(QIcon("AppIcons/user.png"), "Get User", self)
+        getUser_action = QAction(QIcon("AppIcons/user.png"), "&Get User", self)
         getUser_action.triggered.connect(self.getUser_button_clicked)
         user_menu.addAction(getUser_action)
 
          # Trip
-        getTrips_action = QAction(QIcon("AppIcons/user.png"), "Get Trips", self)
+        getTrips_action = QAction(QIcon("AppIcons/user.png"), "&Get Trips", self)
         getTrips_action.triggered.connect(self.getTrips_button_clicked)
         trip_menu.addAction(getTrips_action)
 
-        getAvTripBenchmarks_action = QAction(QIcon("AppIcons/user.png"), "Get Average Trip Benchmarks", self)
+        getAvTripBenchmarks_action = QAction(QIcon("AppIcons/user.png"), "&Get Average Trip Benchmarks", self)
         getAvTripBenchmarks_action.triggered.connect(self.getAvTripBenchmarks_button_clicked)
         trip_menu.addAction(getAvTripBenchmarks_action)
 
-        getEEOI_action = QAction(QIcon("AppIcons/user.png"), "Get EEOI", self)
+        getEEOI_action = QAction(QIcon("AppIcons/user.png"), "&Get EEOI", self)
         getEEOI_action.triggered.connect(self.getEEOI_button_clicked)
         trip_menu.addAction(getEEOI_action)
 
-        getAvEEOI_action = QAction(QIcon("AppIcons/user.png"), "Get Average EEOI", self)
+        getAvEEOI_action = QAction(QIcon("AppIcons/user.png"), "&Get Average EEOI", self)
         getAvEEOI_action.triggered.connect(self.getAvEEOI_button_clicked)
         trip_menu.addAction(getAvEEOI_action)
 
         # Haul
-        getHaul_action = QAction(QIcon("AppIcons/user.png"), "Get Hauls", self)
+        getHaul_action = QAction(QIcon("AppIcons/user.png"), "&Get Hauls", self)
         getHaul_action.triggered.connect(self.getHaul_button_clicked)
         haul_menu.addAction(getHaul_action)
 
@@ -215,27 +222,25 @@ class MainWindow(QMainWindow):
         kpi_05_action.triggered.connect(self.kpi05_button_clicked)
         kpi_menu.addAction(kpi_05_action)
 
-
-
         ## Add button actions to AUTHORIZATION menu
         auth_action = QAction(QIcon("AppIcons/door-open.png"), "&Authorize", self)
         auth_action.triggered.connect(self.auth_button_clicked)
         auth_menu.addAction(auth_action)
 
         ## add button actions to SUSTAINABILITY menu
-        reder_action = QAction(QIcon("AppIcons/building.png"), "Reder", self)
+        reder_action = QAction(QIcon("AppIcons/building.png"), "&Reder", self)
         reder_action.triggered.connect(self.reder_button_clicked)
         sust_menu.addAction(reder_action)
 
-        skipper_action = QAction(QIcon("AppIcons/user-business-boss.png"), "Skipper", self)
+        skipper_action = QAction(QIcon("AppIcons/user-business-boss.png"), "&Skipper", self)
         skipper_action.triggered.connect(self.skipper_button_clicked)
         sust_menu.addAction(skipper_action)
 
-        bank_action = QAction(QIcon("AppIcons/bank.png"), "Bank", self)
+        bank_action = QAction(QIcon("AppIcons/bank.png"), "&Bank", self)
         bank_action.triggered.connect(self.bank_button_clicked)
         sust_menu.addAction(bank_action)
 
-        supplier_action = QAction(QIcon("AppIcons/shopping-basket.png"), "Supplier", self)
+        supplier_action = QAction(QIcon("AppIcons/shopping-basket.png"), "&Supplier", self)
         supplier_action.triggered.connect(self.supplier_button_clicked)
         sust_menu.addAction(supplier_action)
 
@@ -297,8 +302,9 @@ class MainWindow(QMainWindow):
         ep.get_request(ep.av_eeoi, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), specG = self.speciesCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def getHaul_button_clicked(self):
+        locStr = self.locationText.toPlainText().split('\n')
         toCsvFile = "output/haul.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.haul, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.haul, self.startDateEdit.date(), self.stopDateEdit.date(), lengthG = self.vesselCombo.currentText(), gearG = self.gearCombo.currentText(), specG = self.speciesCombo.currentText(), locationG = locStr, myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
 
     def auth_button_clicked(self):
         # Not implemented

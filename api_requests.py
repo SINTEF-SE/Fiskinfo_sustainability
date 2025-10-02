@@ -70,12 +70,13 @@ itemDict = json.loads('[]')
 
 ## PRIVATE METHODS ###########
 # set the parameters for the query
-def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, limit, offset, myVessel = False):
+def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel = False):
     params = {}
 
     if gearG == "All": gearG = allGearGroups
     if lengthG == "All": lengthG = allVesselGroups
     if specG == "All": specG = allSpeciesGroups
+    if locationG == "All": locationG = ""
 
     if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00Z"
     if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T00:00:00Z"
@@ -85,12 +86,14 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, limit, offset,
         if myVessel: params["fiskeridirVesselIds[]"] = fiskdirId
         if gearG != "": params['gearGroupIds[]'] = gearG
         if specG != "": params['speciesGroupIds[]'] = specG
+        if locationG != "": params['catchLocations[]'] = locationG
     else:
         if lengthG != "": params["lengthGroup"] = lengthG
         if myVessel: params["vesselIds[]"] = fiskdirId 
         else: params["vesselIds[]"] = fiskdirIdGroup
         if gearG != "": params['gearGroups[]'] = gearG
         if specG != "": params['speciesGroupId'] = specG
+        if locationG != "": params['catchLocations[]'] = locationG
 
     if limit != 0: params["limit"] = f"{limit}"
     if offset != 0: params["offset"] = f"{offset}"
@@ -143,10 +146,10 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
 
 ### External methods ################
 
-def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = "", gearG = "", specG = "", limit = 0, offset = 0, myVessel = False, show = False, csvFile = ""):
+def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = "", gearG = "", specG = "", locationG = "", limit = 0, offset = 0, myVessel = False, show = False, csvFile = ""):
     url = base_url + request_type
     header = {'accept': 'application/json'}   
-    params = __getParams(request_type, sDate, eDate, lengthG, gearG, specG, limit, offset, myVessel)
+    params = __getParams(request_type, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel)
     global itemDict
 
     if (printout):
