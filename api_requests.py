@@ -73,10 +73,10 @@ itemDict = json.loads('[]')
 def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel = False):
     params = {}
 
-    if gearG == "All": gearG = allGearGroups
-    if lengthG == "All": lengthG = allVesselGroups
-    if specG == "All": specG = allSpeciesGroups
-    if locationG == "All": locationG = ""
+    if gearG[0] == "All": gearG = allGearGroups
+    if lengthG[0] == "All": lengthG = allVesselGroups
+    if specG[0] == "All": specG = "" # allSpeciesGroups
+    if locationG[0] == "All": locationG = ""
 
     if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00Z"
     if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T00:00:00Z"

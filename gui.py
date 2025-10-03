@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QMainWindow, QPushButton, QToolBar, QLabel, QCheckBox, QStatusBar, QCheckBox, QGridLayout, QWidget, QDateEdit, QLineEdit, QComboBox, QSlider, QTextEdit
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QMainWindow, QPushButton, QToolBar, QLabel, QCheckBox, QStatusBar, QCheckBox, QGridLayout, QWidget, QDateEdit, QLineEdit, QComboBox, QSlider, QTextEdit, QStyledItemDelegate
+from PySide6.QtGui import QAction, QIcon, QStandardItem, QStandardItemModel, QFontMetrics
 from PySide6.QtCore import*
 import api_requests as ep
 import copy
@@ -8,6 +8,110 @@ from reports import*
 from KPI import*
 
 
+# CheckableQCombobox with multiple choices
+"""
+    Multiple choice ComboBox with checked items display
+    based on:
+    https://gis.stackexchange.com/questions/350148/qcombobox-multiple-selection-pyqt5
+"""
+class MultiComboBox(QComboBox):
+    class Delegate(QStyledItemDelegate):
+        # Subclass Delegate to increase item line spacing
+        def sizeHint(self, option, index):
+            size = super().sizeHint(option, index)
+            size.setHeight(max(20, size.height()))
+            return size
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Make the combo editable to set a custom text, but readonly
+        self.setEditable(True)      # needed to create LineEdit
+        self.lineEdit().setReadOnly(True)
+
+        # Catch exit via RETURN key to ensure proper text display
+        self.lineEdit().returnPressed.connect(self.update_text)
+
+        # Allow clicks on item's text to perform toggle
+        self.view().pressed.connect(self.handle_item_press)
+
+        # Use custom delegate for sizing
+        self.setItemDelegate(MultiComboBox.Delegate())
+
+        # Update the text when an item is toggled
+        self.model().dataChanged.connect(self.update_text)
+
+    def resizeEvent(self, e):
+        # Recompute text to elide *after* resizing so updated width is used
+        super().resizeEvent(e)
+        self.update_text()
+
+    def get_model(self) -> QStandardItemModel:
+        # Perform "cast" on QAbstractItemModel to what QComboBox instantiates
+        # to avoid linter complaints about it not being a QStandardItemModel
+        model = self.model()
+        if isinstance(model, QStandardItemModel):
+            return model
+        else:
+            raise ValueError(f'model is {type(model)}?')
+
+    def handle_item_press(self, index: QModelIndex):
+        # Toggle checkbox of clicked on item; triggers dataChanged which updates the text
+        item = self.get_model().itemFromIndex(index)
+        if item.checkState == Qt.CheckState.Checked:
+            item.setCheckState(Qt.CheckState.Unchecked)
+        else:
+            item.setCheckState(Qt.CheckState.Checked)
+
+    def update_text(self):
+        texts = []
+        model = self.get_model()
+        for i in range(model.rowCount()):
+            if model.item(i).checkState() == Qt.CheckState.Checked:
+                texts.append(model.item(i).text())
+        text = ", ".join(texts)
+
+        # Compute elided text (with "...")
+        metrics = QFontMetrics(self.lineEdit().font())
+        elided_text = metrics.elidedText(text, Qt.TextElideMode.ElideRight, self.lineEdit().width())
+        self.lineEdit().setText(elided_text)
+        # print('update_text:', elided_text)
+
+    def add_item(self, text, checked=False, data=None):
+        # Add a new "choice" with optional initial check state and data value
+        item = QStandardItem(text)
+        item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
+        item.setCheckState(Qt.CheckState.Checked if checked else Qt.CheckState.Unchecked)
+        item.setData(data if data is not None else text)
+        self.get_model().appendRow(item)
+
+    def add_items(self, texts, checklist=None, datalist=None):
+        # Add a list of new "choices" with optional initial states and data values
+        for i, text in enumerate(texts):
+            checked = False if not checklist else checklist[i]
+            data = None if not datalist else datalist[i]
+            self.add_item(text, checked, data)
+
+    def checked_items_data(self):
+        # Return a list of the checked items' data values (defaulted to item's text)
+        items = []
+        model = self.get_model()
+        for i in range(model.rowCount()):
+            item = model.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                items.append(item.data())
+        return items
+
+    def checked_items_text(self):
+        # Return a list of tuple(text, data) for checked items
+        tds = []
+        model = self.get_model()
+        for i in range(model.rowCount()):
+            item = model.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                tds.append((item.text(), item.data()))
+        return tds
+#--------
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -64,28 +168,28 @@ class MainWindow(QMainWindow):
         ## Add vessel group dropdown box
         vesselLabel = QLabel("Lengdegruppe:")
         layout.addWidget(vesselLabel, 1, 0)
-        self.vesselCombo = QComboBox()
+        self.vesselCombo = MultiComboBox()
         self.vesselCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.vesselCombo.addItem("")
-        self.vesselCombo.addItems(ep.allVesselGroups)
+        self.vesselCombo.add_item("All")
+        self.vesselCombo.add_items(ep.allVesselGroups)
         layout.addWidget(self.vesselCombo, 1, 1)
 
         ## Add gear group field dropdown box
         gearLabel = QLabel("Redskapsgruppe:")
         layout.addWidget(gearLabel, 2, 0)
-        self.gearCombo = QComboBox()
+        self.gearCombo = MultiComboBox()
         self.gearCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.gearCombo.addItem("")
-        self.gearCombo.addItems(ep.allGearGroups)
+        self.gearCombo.add_item("All")
+        self.gearCombo.add_items(ep.allGearGroups)
         layout.addWidget(self.gearCombo, 2, 1)
 
         ## Add species group dropdown box
         speciesLabel = QLabel("Artsgruppe:")
         layout.addWidget(speciesLabel, 3, 0)
-        self.speciesCombo = QComboBox()
+        self.speciesCombo = MultiComboBox()
         self.speciesCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.speciesCombo.addItem("")
-        self.speciesCombo.addItems(ep.allSpeciesGroups)
+        self.speciesCombo.add_item("All")
+        self.speciesCombo.add_items(ep.allSpeciesGroups)
         layout.addWidget(self.speciesCombo, 3, 1)
 
         ## Add catch locations array
@@ -131,7 +235,7 @@ class MainWindow(QMainWindow):
 
         ## Create menu items to toolbar
         menu = self.menuBar()
-        api_menu = menu.addMenu("&Datafangst API kall")
+        api_menu = menu.addMenu("&Datafangst API")
         auth_menu = menu.addMenu("Innlogging")
         sust_menu = menu.addMenu("Rapporter")
         pef_menu = menu.addMenu("Pef")
@@ -287,11 +391,27 @@ class MainWindow(QMainWindow):
 
     def getTrips_button_clicked(self):
         toCsvFile = "output/trips.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.trips, self.startDateEdit.date(), self.stopDateEdit.date(), limit = self.limitEdit.text(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), specG = self.speciesCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.trips,
+                       self.startDateEdit.date(),
+                       self.stopDateEdit.date(),
+                       limit = self.limitEdit.text(),
+                       gearG = self.gearCombo.checked_items_data(),
+                       lengthG = self.vesselCombo.checked_items_data(),
+                       specG = self.speciesCombo.checked_items_data(),
+                       myVessel = self.myVessel.isChecked(),
+                       show = self.showOutput.isChecked(),
+                       csvFile = toCsvFile)
 
     def getAvTripBenchmarks_button_clicked(self):
         toCsvFile = "output/avTripBenchmarks.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.avTripBench, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.avTripBench,
+                       self.startDateEdit.date(),
+                       self.stopDateEdit.date(),
+                       gearG = self.gearCombo.checked_items_data(),
+                       lengthG = self.vesselCombo.checked_items_data(),
+                       myVessel = self.myVessel.isChecked(),
+                       show = self.showOutput.isChecked(),
+                       csvFile = toCsvFile)
 
     def getEEOI_button_clicked(self):
         toCsvFile = "output/EEOI.csv" if self.storeCsv.isChecked() else ""
@@ -299,12 +419,31 @@ class MainWindow(QMainWindow):
 
     def getAvEEOI_button_clicked(self):
         toCsvFile = "output/avEEOI.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.av_eeoi, self.startDateEdit.date(), self.stopDateEdit.date(), gearG = self.gearCombo.currentText(), lengthG = self.vesselCombo.currentText(), specG = self.speciesCombo.currentText(), myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.av_eeoi,
+                       self.startDateEdit.date(),
+                       self.stopDateEdit.date(),
+                       gearG = self.gearCombo.checked_items_data(),
+                       lengthG = self.vesselCombo.checked_items_data(),
+                       specG = self.speciesCombo.checked_items_data(),
+                       myVessel = self.myVessel.isChecked(),
+                       show = self.showOutput.isChecked(),
+                       csvFile = toCsvFile)
 
     def getHaul_button_clicked(self):
         locStr = self.locationText.toPlainText().split('\n')
         toCsvFile = "output/haul.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.haul, self.startDateEdit.date(), self.stopDateEdit.date(), lengthG = self.vesselCombo.currentText(), gearG = self.gearCombo.currentText(), specG = self.speciesCombo.currentText(), locationG = locStr, myVessel = self.myVessel.isChecked(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.haul,
+                       self.startDateEdit.date(),
+                       self.stopDateEdit.date(),
+                       lengthG = self.vesselCombo.checked_items_data(),
+                       gearG = self.gearCombo.checked_items_data(),
+                       specG = self.speciesCombo.checked_items_data(),
+                       locationG = locStr,
+                       limit = self.limitEdit.text(),
+                       offset = self.offsetEdit.text(),
+                       myVessel = self.myVessel.isChecked(),
+                       show = self.showOutput.isChecked(),
+                       csvFile = toCsvFile)
 
     def auth_button_clicked(self):
         # Not implemented
@@ -320,7 +459,12 @@ class MainWindow(QMainWindow):
 
     def bank_button_clicked(self):
         ## get start and stop dates
-        createBankReport(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        createBankReport(self.stopDateEdit.date(),
+                         self.vesselCombo.checked_items_data(),
+                         self.gearCombo.checked_items_data(),
+                         self.speciesCombo.checked_items_data(),
+                         int(self.aggEdit.text()),
+                         int(self.resEdit.text()))
          
 
     def supplier_button_clicked(self):
@@ -336,7 +480,10 @@ class MainWindow(QMainWindow):
         # Produce graphics and output for EEOI
         dateArray = getDatesArray(self.stopDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text()))
         print (dateArray)
-        kpi_01(self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), dateArray)
+        kpi_01(self.vesselCombo.checked_items_data(),
+               self.gearCombo.checked_items_data(),
+               self.speciesCombo.checked_items_data(),
+               dateArray)
 
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
