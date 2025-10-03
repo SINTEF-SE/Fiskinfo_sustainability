@@ -170,7 +170,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(vesselLabel, 1, 0)
         self.vesselCombo = MultiComboBox()
         self.vesselCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.vesselCombo.add_item("All")
+        self.vesselCombo.add_item("Alle", checked = True)
         self.vesselCombo.add_items(ep.allVesselGroups)
         layout.addWidget(self.vesselCombo, 1, 1)
 
@@ -179,7 +179,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(gearLabel, 2, 0)
         self.gearCombo = MultiComboBox()
         self.gearCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.gearCombo.add_item("All")
+        self.gearCombo.add_item("Alle", checked = True)
         self.gearCombo.add_items(ep.allGearGroups)
         layout.addWidget(self.gearCombo, 2, 1)
 
@@ -188,14 +188,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(speciesLabel, 3, 0)
         self.speciesCombo = MultiComboBox()
         self.speciesCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.speciesCombo.add_item("All")
+        self.speciesCombo.add_item("Alle", checked = True)
         self.speciesCombo.add_items(ep.allSpeciesGroups)
         layout.addWidget(self.speciesCombo, 3, 1)
 
         ## Add catch locations array
         locationLabel = QLabel("Fangstfelt:")
         layout.addWidget(locationLabel, 3, 2)
-        self.locationText = QTextEdit("All")
+        self.locationText = QTextEdit("Alle")
         self.locationText.setStyleSheet("QTextEdit { background-color: lightblue; color: black; }")
         layout.addWidget(self.locationText, 3, 3)
 
