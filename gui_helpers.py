@@ -3,7 +3,7 @@ from PySide6.QtGui import QStandardItem, QFontMetrics, QStandardItemModel
 from PySide6.QtWidgets import QComboBox, QStyledItemDelegate
 
 # Helper classes for gui setup
-# MultiComboBox for multiple choice combo box
+# MultiComboBox for multiple choice combo box so more than one item can be selected for group boxes (e.g. lenght, gear, species)
 
 #CheckableQCombobox with multiple choices
 
@@ -108,4 +108,4 @@ class MultiComboBox(QComboBox):
             if item.checkState() == Qt.CheckState.Checked:
                 tds.append((item.text(), item.data()))
         return tds
-#--------
+

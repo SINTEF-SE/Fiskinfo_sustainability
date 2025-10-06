@@ -46,14 +46,14 @@ class MainWindow(QMainWindow):
         ## Add startdate field
         startDateLabel = QLabel("Start dato:")
         layout.addWidget(startDateLabel, 0, 0)
-        self.startDateEdit = QDateEdit(QDate.currentDate())
+        self.startDateEdit = QDateEdit(QDate(2024,1,1))
         self.startDateEdit.setStyleSheet("QDateEdit { background-color: lightblue; color: black; }")
         layout.addWidget(self.startDateEdit, 0, 1)
 
         ## Add stopdate field
         stopDateLabel = QLabel("Stopp dato:")
         layout.addWidget(stopDateLabel, 0, 2)
-        self.stopDateEdit = QDateEdit(QDate.currentDate())
+        self.stopDateEdit = QDateEdit(QDate(2024,12,31))
         self.stopDateEdit.setStyleSheet("QDateEdit { background-color: lightblue; color: black; }")
         layout.addWidget(self.stopDateEdit, 0, 3)
 
@@ -62,8 +62,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(vesselLabel, 1, 0)
         self.vesselCombo = MultiComboBox()
         self.vesselCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.vesselCombo.add_item("Alle", checked = True)
-        self.vesselCombo.add_items(ep.allVesselGroups)
+        self.vesselCombo.add_item("All", checked = False)
+        self.vesselCombo.add_items(ep.allVesselGroups,[False,False,False,False,False,True])
+
+        # Gear group
+        allGearGroups = ["Unknown", "Seine", "Net", "HookGear", "LobsterTrapAndFykeNets", "Trawl", "DanishSeine",
+                         "HarpoonCannon", "OtherGear", "FishFarming"]
         layout.addWidget(self.vesselCombo, 1, 1)
 
         ## Add gear group field dropdown box
@@ -71,8 +75,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(gearLabel, 2, 0)
         self.gearCombo = MultiComboBox()
         self.gearCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.gearCombo.add_item("Alle", checked = True)
-        self.gearCombo.add_items(ep.allGearGroups)
+        self.gearCombo.add_item("All", checked = False)
+        self.gearCombo.add_items(ep.allGearGroups,[False,False,False,False,False,True,False,False,False,False])
         layout.addWidget(self.gearCombo, 2, 1)
 
         ## Add species group dropdown box
@@ -80,14 +84,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(speciesLabel, 3, 0)
         self.speciesCombo = MultiComboBox()
         self.speciesCombo.setStyleSheet("QComboBox { background-color: lightblue; color: black; }")
-        self.speciesCombo.add_item("Alle", checked = True)
+        self.speciesCombo.add_item("All", checked = True)
         self.speciesCombo.add_items(ep.allSpeciesGroups)
         layout.addWidget(self.speciesCombo, 3, 1)
 
         ## Add catch locations array
         locationLabel = QLabel("Fangstfelt:")
         layout.addWidget(locationLabel, 3, 2)
-        self.locationText = QTextEdit("Alle")
+        self.locationText = QTextEdit("All")
         self.locationText.setStyleSheet("QTextEdit { background-color: lightblue; color: black; }")
         layout.addWidget(self.locationText, 3, 3)
 
@@ -96,8 +100,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.myVessel, 5, 1)
 
         ## Add a show checkbox (to output results of the query)
-        self.showOutput = QCheckBox("Vis resultat", self)
-        layout.addWidget(self.showOutput, 5, 2)
+        self.debugOutput = QCheckBox("Vis respons", self)
+        layout.addWidget(self.debugOutput, 5, 2)
 
         ## Add a scsv checkbox (to output results of the query)
         self.storeCsv = QCheckBox("Lagre API-respons som CSV", self)
@@ -108,7 +112,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(aggLabel, 1, 2)
         self.aggEdit = QLineEdit()
         self.aggEdit.setStyleSheet("QLineEdit { background-color: lightblue; color: black; }")
-        self.aggEdit.setText(str('1'))
+        self.aggEdit.setText(str('3'))
         layout.addWidget(self.aggEdit, 1, 3)
 
         ## Add field for number of periods calculated (for KPI calculations)
@@ -116,7 +120,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(resLabel, 2, 2)
         self.resEdit = QLineEdit()
         self.resEdit.setStyleSheet("QLineEdit { background-color: lightblue; color: black; }")
-        self.resEdit.setText(str('1'))
+        self.resEdit.setText(str('4'))
         layout.addWidget(self.resEdit, 2, 3)
                
         ## Create toolbar
@@ -250,36 +254,36 @@ class MainWindow(QMainWindow):
     
     def getGear_button_clicked(self):
         toCsvFile = "output/gear.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.gear, show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.gear, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getGearGroups_button_clicked(self):
         toCsvFile = "output/gearGroups.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.gear_groups, show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.gear_groups, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getGearMainGroups_button_clicked(self):
         toCsvFile = "output/gearMainGroups.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.gear_main_groups, show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.gear_main_groups, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getVessels_button_clicked(self):
         toCsvFile = "output/vessels.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.vessels, show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.vessels, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
         #if jsonData: jsonToCsv(jsonData, "csvTest.csv")
 
     def getVesselsFuel_button_clicked(self):
         toCsvFile = "output/vesselsFuel.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.fuel, self.startDateEdit.date(), self.stopDateEdit.date(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.fuel, self.startDateEdit.date(), self.stopDateEdit.date(), debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getVesselsLiveFuel_button_clicked(self):
         toCsvFile = "output/vesselsLiveFuel.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.live_fuel, show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.live_fuel, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getVesselsBenchmarks_button_clicked(self):
         toCsvFile = "output/benchmarks.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.vessel_benchmarks, show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.vessel_benchmarks, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getUser_button_clicked(self):
         toCsvFile = "output/user.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.user, show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.user, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getTrips_button_clicked(self):
         toCsvFile = "output/trips.csv" if self.storeCsv.isChecked() else ""
@@ -291,7 +295,7 @@ class MainWindow(QMainWindow):
                        lengthG = self.vesselCombo.checked_items_data(),
                        specG = self.speciesCombo.checked_items_data(),
                        myVessel = self.myVessel.isChecked(),
-                       show = self.showOutput.isChecked(),
+                       debug = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def getAvTripBenchmarks_button_clicked(self):
@@ -302,27 +306,40 @@ class MainWindow(QMainWindow):
                        gearG = self.gearCombo.checked_items_data(),
                        lengthG = self.vesselCombo.checked_items_data(),
                        myVessel = self.myVessel.isChecked(),
-                       show = self.showOutput.isChecked(),
+                       debug = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def getEEOI_button_clicked(self):
         toCsvFile = "output/EEOI.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.eeoi, self.startDateEdit.date(), self.stopDateEdit.date(), show = self.showOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.eeoi,
+                       self.startDateEdit.date(),
+                       self.stopDateEdit.date(),
+                       gearG=self.gearCombo.checked_items_data(),
+                       lengthG=self.vesselCombo.checked_items_data(),
+                       specG=self.speciesCombo.checked_items_data(),
+                       locationG=self.locationText.toPlainText().split('\n'),
+                       limit=self.limitEdit.text(),
+                       offset=self.offsetEdit.text(),
+                       myVessel=self.myVessel.isChecked(),
+                       debug = self.debugOutput.isChecked(),
+                       csvFile = toCsvFile)
 
     def getAvEEOI_button_clicked(self):
         toCsvFile = "output/avEEOI.csv" if self.storeCsv.isChecked() else ""
         ep.get_request(ep.av_eeoi,
                        self.startDateEdit.date(),
                        self.stopDateEdit.date(),
-                       gearG = self.gearCombo.checked_items_data(),
-                       lengthG = self.vesselCombo.checked_items_data(),
-                       specG = self.speciesCombo.checked_items_data(),
-                       myVessel = self.myVessel.isChecked(),
-                       show = self.showOutput.isChecked(),
+                       gearG=self.gearCombo.checked_items_data(),
+                       lengthG=self.vesselCombo.checked_items_data(),
+                       specG=self.speciesCombo.checked_items_data(),
+                       locationG=self.locationText.toPlainText().split('\n'),
+                       limit=self.limitEdit.text(),
+                       offset=self.offsetEdit.text(),
+                       myVessel=self.myVessel.isChecked(),
+                       debug = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def getHaul_button_clicked(self):
-        locStr = self.locationText.toPlainText().split('\n')
         toCsvFile = "output/haul.csv" if self.storeCsv.isChecked() else ""
         ep.get_request(ep.haul,
                        self.startDateEdit.date(),
@@ -330,11 +347,11 @@ class MainWindow(QMainWindow):
                        lengthG = self.vesselCombo.checked_items_data(),
                        gearG = self.gearCombo.checked_items_data(),
                        specG = self.speciesCombo.checked_items_data(),
-                       locationG = locStr,
+                       locationG =  self.locationText.toPlainText().split('\n'),
                        limit = self.limitEdit.text(),
                        offset = self.offsetEdit.text(),
                        myVessel = self.myVessel.isChecked(),
-                       show = self.showOutput.isChecked(),
+                       debug = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def auth_button_clicked(self):
@@ -370,17 +387,18 @@ class MainWindow(QMainWindow):
         
     def kpi01_button_clicked(self):
         # Produce graphics and output for EEOI
-        dateArray = getDatesArray(self.stopDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text()))
-        print (dateArray)
+        dateArray = getDatesArray(self.stopDateEdit.date(), self.startDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        print(dateArray)
         kpi_01(self.vesselCombo.checked_items_data(),
                self.gearCombo.checked_items_data(),
                self.speciesCombo.checked_items_data(),
+               self.locationText.toPlainText().split('\n'),
                dateArray)
 
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
-        print()
-       # kpi_02(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        #print()
+        kpi_02(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), self.locationText.toPlainText().split('\n'), int(self.aggEdit.text()), int(self.resEdit.text()))
 
 
     def kpi05_button_clicked(self):

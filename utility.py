@@ -1,11 +1,10 @@
-
-
+import PySide6.QtCore
 import matplotlib.pyplot as plt
 import numpy as np
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
-def getDatesArray(eDate, span, periods):  
-        endDateArray = ['endDate']          # holds the end dates for all requests
+def getDatesArray(eDate, sDate, span, periods):
+        endDateArray = ['endDate']   # holds the end dates for all requests
         startDateArray = ['startDate']
         dateArray = []
 
@@ -13,9 +12,8 @@ def getDatesArray(eDate, span, periods):
                 endDateArray.append(eDate.addMonths(-m*span))
 
         for d in endDateArray:
-                startDateArray.append(d.addMonths(-span))   
-
-        #print(endDateList) 
+                if isinstance(d,PySide6.QtCore.QDate):
+                    startDateArray.append(d.addMonths(-span))
 
         dateArray.append(startDateArray)
         dateArray.append(endDateArray)  

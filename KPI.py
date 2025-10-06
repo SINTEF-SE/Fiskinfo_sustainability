@@ -3,7 +3,7 @@ import api_requests as ep
 from collections import Counter
 import reports as r
 
-def kpi_01(lengthG, gearG, specG, dateArray):
+def kpi_01(lengthG, gearG, specG, locG, dateArray):
     # Get Norwegian name of lenght group
     norskLgroup = nlg(lengthG)
    
@@ -18,9 +18,9 @@ def kpi_01(lengthG, gearG, specG, dateArray):
     endDateList = dateArray[1]
     m = 0
     for sDate in startDateList:     
-        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, myVessel = True)
+        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, myVessel = True)
         myEeoiArray.append(eeoi)
-        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, myVessel = False)
+        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, locationG = locG, myVessel = False)
         avEeoiArray.append(eeoi)
         m += 1
     entries = len(endDateList)
@@ -60,7 +60,7 @@ def kpi_01(lengthG, gearG, specG, dateArray):
 
     return retArray
 
-def kpi_02(lengthG, gearG, specG, dateArray):
+def kpi_02(lengthG, gearG, specG, locG, dateArray):
     # Get Norwegian name of lenght group
     norskLgroup = nlg(lengthG)
    
@@ -75,9 +75,9 @@ def kpi_02(lengthG, gearG, specG, dateArray):
     endDateList = dateArray[1]
     m = 0
     for sDate in startDateList:     
-        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, myVessel = True)
+        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, myVessel = True)
         myFuiArray.append(fui)
-        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, myVessel = False)
+        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, locationG = locG, myVessel = False)
         avFuiArray.append(fui)
         m += 1
 
