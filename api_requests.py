@@ -100,25 +100,11 @@ def __logRequests(time = "", url= "", header = "", params = "", response = None,
 # set the parameters for the query
 def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel = False):
     params = {}
-    print(f"Request type: {requestType}")
-    print(f"Start date: {sDate}")
-    print(f"End date: {eDate}")
-    print(f"Length group: {lengthG}")
-    print(f"Gear group: {gearG}")
-    print(f"Species group: {specG}")
-    print(f"Location group: {locationG}")
-    print(f"Limit: {limit}")
-    print(f"Offset: {offset}")
-    print(f"My vessel: {myVessel}")
-
     if gearG[0] == "All": gearG = allGearGroups
     if lengthG[0] == "All": lengthG = allVesselGroups
-    if specG[0] == "All": specG = allSpeciesGroups
+    if specG[0] == "All": specG = [] #allSpeciesGroups
     if locationG[0] == "All": locationG = []
-    print(f"Gear group: {gearG}")
-    print(f"Length group: {lengthG}")
-    print(f"Species group: {specG}")
-    print(f"Location group: {locationG}")
+    #print(f"Gear group: {gearG}"), print(f"Length group: {lengthG}"), print(f"Species group: {specG}"),print(f"Location group: {locationG}")
 
     if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00Z"
     if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T00:00:00Z"
