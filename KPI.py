@@ -4,7 +4,7 @@ from collections import Counter
 import reports as r
 
 def kpi_01(lengthG, gearG, specG, locG, dateArray):
-    # Get Norwegian name of lenght group
+    # Get Norwegian name of length group
     norskLgroup = nlg(lengthG)
    
     #Calculate list of end dates for all periods
@@ -31,7 +31,7 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
    # sDate = eDate.addMonths(-span*periods)
    
     # Find total number of vessels in in group
-    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG = specG)
+    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG, locG)
     
     print("myEeoi array: ", myEeoiArray)
     print("AvEeoi array: ", avEeoiArray)
@@ -86,7 +86,7 @@ def kpi_02(lengthG, gearG, specG, locG, dateArray):
     retArray.append(avFuiArray)
 
     # Find total number of vessels in in group
-    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG = specG)
+    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG, locG)
     
     print("myFui array: ", myFuiArray)
     print("AvFui array: ", avFuiArray)
@@ -142,14 +142,14 @@ def kpi_02(lengthG, gearG, specG, locG, dateArray):
 
 ## Utility functions  
 # Get total number of vessels in a gear group and lenght group (and specied group) within specified dates
-def getTotalVessels(request, sDate, eDate, lengthG, gearG, specG):
+def getTotalVessels(request, sDate, eDate, lengthG, gearG, specG, locG):
     
     offset = 0
     nItems = 100
     allItems = []
 
     while (nItems == 100):
-        itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, limit = 100, offset = offset)
+        itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, limit = 100, offset = offset)
         allItems += itemDict
         nItems = len(itemDict)
         offset += 100
@@ -161,14 +161,14 @@ def getTotalVessels(request, sDate, eDate, lengthG, gearG, specG):
 
 # get main specie for a my vessel within specified dates (should be changed to use landings instead)
 # Not used
-def getMainSpecie(request, sDate, eDate, lengthG, gearG, specG):
+def getMainSpecie(request, sDate, eDate, lengthG, gearG, specG, locG):
     
     offset = 0
     nItems = 100
     allItems = []
 
     while (nItems == 100):
-        itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, limit = 100, offset = offset, myVessel = True)
+        itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, limit = 100, offset = offset, myVessel = True)
         allItems += itemDict
         nItems = len(itemDict)
         offset += 100
