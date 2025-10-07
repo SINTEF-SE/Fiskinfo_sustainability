@@ -4,21 +4,21 @@ import numpy as np
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
 def getDatesArray(eDate, sDate, span, periods):
-        endDateArray = ['endDate']   # holds the end dates for all requests
-        startDateArray = ['startDate']
-        dateArray = []
+    endDateArray = []  # ['endDate']          # holds the end dates for all requests
+    startDateArray = []  # ['startDate']      # PGA: the strings break the KPI calculations
+    dateArray = []
 
-        for m in reversed(range(0,periods)):
-                endDateArray.append(eDate.addMonths(-m*span))
+    for m in reversed(range(0,periods)):
+            endDateArray.append(eDate.addMonths(-m*span))
 
-        for d in endDateArray:
-                if isinstance(d,PySide6.QtCore.QDate):
-                    startDateArray.append(d.addMonths(-span))
+    for d in endDateArray:
+            if isinstance(d,PySide6.QtCore.QDate):
+                startDateArray.append(d.addMonths(-span))
 
-        dateArray.append(startDateArray)
-        dateArray.append(endDateArray)  
+    dateArray.append(startDateArray)
+    dateArray.append(endDateArray)
 
-        return dateArray
+    return dateArray
 
 def monthsBetweenQdates(start_date, end_date) -> int:
     """
