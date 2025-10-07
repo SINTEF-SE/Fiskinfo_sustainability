@@ -100,8 +100,8 @@ def __logRequests(time = "", url= "", header = "", params = "", response = None,
 # set the parameters for the query
 def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel = False):
     params = {}
-    if gearG[0] == "All": gearG = allGearGroups
-    if lengthG[0] == "All": lengthG = allVesselGroups
+    if gearG[0] == "All": gearG = [] #allGearGroups
+    if lengthG[0] == "All": lengthG = [] # allVesselGroups
     if specG[0] == "All": specG = [] #allSpeciesGroups
     if locationG[0] == "All": locationG = []
     #print(f"Gear group: {gearG}"), print(f"Length group: {lengthG}"), print(f"Species group: {specG}"),print(f"Location group: {locationG}")
