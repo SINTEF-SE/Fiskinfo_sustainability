@@ -5,8 +5,8 @@ import numpy as np
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
 def getDatesArray(eDate, span, periods):  
-        endDateArray = ['endDate']          # holds the end dates for all requests
-        startDateArray = ['startDate']
+        endDateArray = [] #['endDate']          # holds the end dates for all requests
+        startDateArray = [] #['startDate']      # PGA: the strings break the KPI calculations
         dateArray = []
 
         for m in reversed(range(0,periods)):
