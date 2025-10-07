@@ -3,8 +3,8 @@ import api_requests as ep
 from collections import Counter
 import reports as r
 
-def kpi_01(lengthG, gearG, specG, dateArray):
-    # Get Norwegian name of lenght group
+def kpi_01(lengthG, gearG, specG, locG, dateArray):
+    # Get Norwegian name of length group
     norskLgroup = nlg(lengthG)
    
     #Calculate list of end dates for all periods
@@ -18,9 +18,9 @@ def kpi_01(lengthG, gearG, specG, dateArray):
     endDateList = dateArray[1]
     m = 0
     for sDate in startDateList:     
-        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, myVessel = True)
+        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, myVessel = True)
         myEeoiArray.append(eeoi)
-        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, myVessel = False)
+        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, locationG = locG, myVessel = False)
         avEeoiArray.append(eeoi)
         m += 1
     entries = len(endDateList)
@@ -31,7 +31,7 @@ def kpi_01(lengthG, gearG, specG, dateArray):
    # sDate = eDate.addMonths(-span*periods)
    
     # Find total number of vessels in in group
-    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG = specG)
+    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG, locG)
     
     print("myEeoi array: ", myEeoiArray)
     print("AvEeoi array: ", avEeoiArray)
@@ -60,7 +60,7 @@ def kpi_01(lengthG, gearG, specG, dateArray):
 
     return retArray
 
-def kpi_02(lengthG, gearG, specG, dateArray):
+def kpi_02(lengthG, gearG, specG, locG, dateArray):
     # Get Norwegian name of lenght group
     norskLgroup = nlg(lengthG)
    
@@ -75,9 +75,9 @@ def kpi_02(lengthG, gearG, specG, dateArray):
     endDateList = dateArray[1]
     m = 0
     for sDate in startDateList:     
-        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, myVessel = True)
+        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, myVessel = True)
         myFuiArray.append(fui)
-        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, myVessel = False)
+        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, locationG = locG, myVessel = False)
         avFuiArray.append(fui)
         m += 1
 
@@ -86,7 +86,7 @@ def kpi_02(lengthG, gearG, specG, dateArray):
     retArray.append(avFuiArray)
 
     # Find total number of vessels in in group
-    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG = specG)
+    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG, locG)
     
     print("myFui array: ", myFuiArray)
     print("AvFui array: ", avFuiArray)
@@ -142,14 +142,14 @@ def kpi_02(lengthG, gearG, specG, dateArray):
 
 ## Utility functions  
 # Get total number of vessels in a gear group and lenght group (and specied group) within specified dates
-def getTotalVessels(request, sDate, eDate, lengthG, gearG, specG):
+def getTotalVessels(request, sDate, eDate, lengthG, gearG, specG, locG):
     
     offset = 0
     nItems = 100
     allItems = []
 
     while (nItems == 100):
-        itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, limit = 100, offset = offset)
+        itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, limit = 100, offset = offset)
         allItems += itemDict
         nItems = len(itemDict)
         offset += 100
@@ -161,14 +161,14 @@ def getTotalVessels(request, sDate, eDate, lengthG, gearG, specG):
 
 # get main specie for a my vessel within specified dates (should be changed to use landings instead)
 # Not used
-def getMainSpecie(request, sDate, eDate, lengthG, gearG, specG):
+def getMainSpecie(request, sDate, eDate, lengthG, gearG, specG, locG):
     
     offset = 0
     nItems = 100
     allItems = []
 
     while (nItems == 100):
-        itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, limit = 100, offset = offset, myVessel = True)
+        itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, limit = 100, offset = offset, myVessel = True)
         allItems += itemDict
         nItems = len(itemDict)
         offset += 100
