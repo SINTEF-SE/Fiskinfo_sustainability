@@ -150,7 +150,7 @@ def get_access_token():
 
 ### External methods ################
 
-def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True) -> None:
+def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True, append: Bool = True) -> None:
     """
     Convert JSON response to CSV file using pandas DataFrame
 
@@ -167,7 +167,10 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
         # Write to CSV, handle encoding for Norwegian characters
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        if append:
+            df.to_csv(output_file, index=False, encoding='utf-8-sig', mode='a', header=not os.path.exists(output_file) or os.path.getsize(output_file) == 0)
+        else:
+            df.to_csv(output_file, index=False, encoding='utf-8-sig', mode='w', header=True)
         logging.info(f"CSV file saved: {output_file}")
 
     except Exception as e:
