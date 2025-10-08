@@ -184,7 +184,7 @@ def get_prepared_request(url="", header= None, params= None, debug = False, csvF
         try:
             response = session.get(url, headers=header, params=params)
             response.raise_for_status()
-            __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log.csv")   # log api requests to file
+            __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log.tsv")   # log api requests to file
             if response.status_code >= 400:
                 logging.error(f"AUTHORIZATION REQUIRED!!! Error code:{response.status_code}")
                 return 0

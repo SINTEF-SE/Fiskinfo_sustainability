@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.myVessel, 5, 1)
 
         ## Add a show checkbox (to output results of the query)
-        self.debugOutput = QCheckBox("Vis respons", self)
+        self.debugOutput = QCheckBox("Debug API respons", self)
         layout.addWidget(self.debugOutput, 5, 2)
 
         ## Add a scsv checkbox (to output results of the query)
