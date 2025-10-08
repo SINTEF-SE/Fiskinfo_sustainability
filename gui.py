@@ -330,7 +330,12 @@ class MainWindow(QMainWindow):
         # Produce graphics and output for EEOI
         dateArray = getDatesArray(self.stopDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text()))
         print (dateArray)
-        kpi_01(self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), dateArray)
+        kpi01Array = kpi_01(self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), dateArray)
+        item = r.Output('Gadus  Njord', 1, self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()), kpi01Array)    
+        jsonArray = []
+        data = item.createJsonItem()
+        jsonArray.append(data)
+        r.createJson(jsonArray, 'jsonTestFile.json')
 
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
