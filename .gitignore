@@ -1,6 +1,6 @@
-csvTest.csv
-csvtestFile.csv
-jsonTestFile.json
 output/
 __pycache__/
 .idea/
+csvTest.csv
+csvtestFile.csv
+jsonTestFile.json
