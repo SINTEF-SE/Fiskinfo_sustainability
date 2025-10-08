@@ -105,17 +105,17 @@ def createCsv(data, csvFile):
         cw.writerows(data)
         
     
-def createBankReport(eDate, lengthG, gearG, specG, span, periods):
+def createBankReport(eDate, lengthG, gearG, specG, locG, span, periods):
     expArray = []
     dateArray = getDatesArray(eDate, span, periods)
     for array in dateArray:
         expArray.append(array)
 
-    eeoiArray = kpi_01(lengthG, gearG, specG, dateArray)
+    eeoiArray = kpi_01(lengthG, gearG, specG, locG, dateArray)
     for array in eeoiArray:
         expArray.append(array)
 
-    fuiArray = kpi_02(lengthG, gearG, specG, dateArray)
+    fuiArray = kpi_02(lengthG, gearG, specG, locG, dateArray)
     for array in fuiArray:
         expArray.append(array)
         
