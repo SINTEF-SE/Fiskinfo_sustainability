@@ -1,6 +1,7 @@
 output/
 __pycache__/
 .idea/
+Pipfile
 csvTest.csv
 csvtestFile.csv
 jsonTestFile.json
