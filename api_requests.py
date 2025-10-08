@@ -150,7 +150,7 @@ def get_access_token():
 
 ### External methods ################
 
-def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True, append: Bool = True) -> None:
+def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True, append: bool = True) -> None:
     """
     Convert JSON response to CSV file using pandas DataFrame
 
