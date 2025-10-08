@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
-def getDatesArray(eDate, span, periods):  
+def getDatesArray(eDate, span, periods):
         endDateArray = []   # holds the end dates for all requests
         startDateArray = [] # holds the start dates for all requests
         dateArray = []
@@ -14,8 +14,6 @@ def getDatesArray(eDate, span, periods):
 
         for d in endDateArray:
                 startDateArray.append(d.addMonths(-span))   
-
-        #print(endDateList) 
 
         dateArray.append(startDateArray)
         dateArray.append(endDateArray)  

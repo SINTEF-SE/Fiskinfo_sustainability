@@ -106,7 +106,7 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, lim
     if locationG[0] == "All": locationG = []
 
     if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00Z"
-    if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T00:00:00Z"
+    if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T23:59:59Z"
     
     if requestType == trips or requestType == haul: 
         if len(lengthG) > 0: params["vesselLengthGroups[]"] = lengthG
@@ -180,7 +180,7 @@ def get_prepared_request(url="", header= None, params= None, debug = False, csvF
     global itemDict
 
     if url != "" and header is not None and params is not None:
-        utc_time = datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')  # ISO 8601 format with 'Z' for UTC
+        utc_time = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')  # ISO 8601 format with 'Z' for UTC
         try:
             response = session.get(url, headers=header, params=params)
             response.raise_for_status()
