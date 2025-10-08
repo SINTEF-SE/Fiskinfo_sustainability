@@ -387,7 +387,8 @@ class MainWindow(QMainWindow):
         
     def kpi01_button_clicked(self):
         # Produce graphics and output for EEOI
-        dateArray = getDatesArray(self.stopDateEdit.date(), self.startDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        #dateArray = getDatesArray(self.stopDateEdit.date(), self.startDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text())) # old
+        dateArray = getDatesArray(self.stopDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text())) # getDatesArray takes only 3 arguments
         print(dateArray)
         kpi_01(self.vesselCombo.checked_items_data(),
                self.gearCombo.checked_items_data(),
