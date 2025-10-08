@@ -5,7 +5,7 @@ import reports as r
 
 def kpi_01(lengthG, gearG, specG, locG, dateArray):
     # Get Norwegian name of length group
-    norskLgroup = nlg(lengthG)
+    norskLgroup = nlg(lengthG) # Make a foreach loop of vessel group
    
     #Calculate list of end dates for all periods
     #dList = sliWin(eDate, span, periods)
@@ -55,7 +55,7 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
     
     # create title for plot
     span = monthsBetweenQdates(startDateList[0], endDateList[0])
-    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
+    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = lengthG, gGroup = gearG)
     plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")
 
     return retArray
