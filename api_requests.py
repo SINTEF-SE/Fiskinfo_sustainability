@@ -105,8 +105,8 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, lim
     if specG[0] == "All": specG = [] #allSpeciesGroups
     if locationG[0] == "All": locationG = []
 
-    if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00Z"
-    if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T23:59:59Z"
+    if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00.000Z"
+    if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T23:59:59.999Z"  # Include last day, when we use end of month or year we expect to include that day
     
     if requestType == trips or requestType == haul: 
         if len(lengthG) > 0: params["vesselLengthGroups[]"] = lengthG
@@ -184,7 +184,7 @@ def get_prepared_request(url="", header= None, params= None, debug = False, csvF
         try:
             response = session.get(url, headers=header, params=params)
             response.raise_for_status()
-            __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log")   # log api requests to file
+            __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log.csv")   # log api requests to file
             if response.status_code >= 400:
                 logging.error(f"AUTHORIZATION REQUIRED!!! Error code:{response.status_code}")
                 return 0
