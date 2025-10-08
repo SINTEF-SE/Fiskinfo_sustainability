@@ -5,8 +5,13 @@ import reports as r
 
 def kpi_01(lengthG, gearG, specG, locG, dateArray):
     # Get Norwegian name of length group
-    norskLgroup = nlg(lengthG) # Make a foreach loop of vessel group
-   
+    norskLgroup = "["
+    if len(lengthG) == 0:
+        norskLgroup += "Alle"
+    else:
+        for lg in lengthG: norskLgroup += nlg(lg) + ","
+    norskLgroup += "]"
+
     #Calculate list of end dates for all periods
     #dList = sliWin(eDate, span, periods)
 
@@ -55,15 +60,20 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
     
     # create title for plot
     span = monthsBetweenQdates(startDateList[0], endDateList[0])
-    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = lengthG, gGroup = gearG)
+    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}, Art: {sGroup}, Fangstfelt:{cArea}".format(months=span, vGroup=norskLgroup, gGroup=emptyArrToAllAlle(gearG), sGroup=emptyArrToAllAlle(specG), cArea=emptyArrToAllAlle(locG))
     plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")
 
     return retArray
 
 def kpi_02(lengthG, gearG, specG, locG, dateArray):
     # Get Norwegian name of lenght group
-    norskLgroup = nlg(lengthG)
-   
+    norskLgroup = "["
+    if len(lengthG) == 0:
+        norskLgroup += "Alle"
+    else:
+        for lg in lengthG: norskLgroup += nlg(lg) + ","
+    norskLgroup += "]"
+
     #Calculate list of end dates for all periods
     #dList = sliWin(eDate, span, periods)
 
@@ -95,8 +105,8 @@ def kpi_02(lengthG, gearG, specG, locG, dateArray):
     return retArray
 
     # create title for plot
-   # title = "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
-   # plot(dList, myFuiArray,avFuiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "FUI")
+    # title = "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}, Art: {sGroup}, Fangstfelt:{cArea}".format(months=span, vGroup=norskLgroup, gGroup=emptyArrToAllAlle(gearG), sGroup=emptyArrToAllAlle(specG), cArea=emptyArrToAllAlle(locG))
+    # plot(dList, myFuiArray,avFuiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "FUI")
 
 
 '''def kpi_05(eDate, lengthG, gearG, specG, span, periods):

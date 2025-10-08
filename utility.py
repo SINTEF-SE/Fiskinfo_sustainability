@@ -3,6 +3,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+def emptyArrToAllAlle(arrgroup):
+    if len(arrgroup) == 0:
+        return ["Alle"]
+    else:
+        return arrgroup
+
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
 def getDatesArray(eDate, span, periods):
         endDateArray = []   # holds the end dates for all requests
