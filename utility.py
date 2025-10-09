@@ -2,8 +2,12 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import re
 
-def emptyArrToAllAlle(arrgroup):
+def splitCatchLocation(field_text):
+    return re.split(r'[ ,\n]+', field_text)
+
+def emptyArrToAlle(arrgroup):
     if len(arrgroup) == 0:
         return ["Alle"]
     else:

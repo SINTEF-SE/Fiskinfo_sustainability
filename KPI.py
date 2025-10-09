@@ -60,7 +60,7 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
     
     # create title for plot
     span = monthsBetweenQdates(startDateList[0], endDateList[0])
-    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}, Art: {sGroup}, Fangstfelt:{cArea}".format(months=span, vGroup=norskLgroup, gGroup=emptyArrToAllAlle(gearG), sGroup=emptyArrToAllAlle(specG), cArea=emptyArrToAllAlle(locG))
+    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}, Art: {sGroup}, Fangstfelt:{cArea}".format(months=span, vGroup=norskLgroup, gGroup=emptyArrToAlle(gearG), sGroup=emptyArrToAlle(specG), cArea=emptyArrToAlle(locG))
     plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")
 
     return retArray

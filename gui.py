@@ -4,6 +4,7 @@ from PySide6.QtCore import*
 from gui_helpers import *
 from reports import*
 from KPI import*
+from utility import splitCatchLocation as scl
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -317,7 +318,7 @@ class MainWindow(QMainWindow):
                        gearG=self.gearCombo.checked_items_data(),
                        lengthG=self.vesselCombo.checked_items_data(),
                        specG=self.speciesCombo.checked_items_data(),
-                       locationG=self.locationText.toPlainText().split('\n'),
+                       locationG=scl(self.locationText.toPlainText()),
                        limit=self.limitEdit.text(),
                        offset=self.offsetEdit.text(),
                        myVessel=self.myVessel.isChecked(),
@@ -332,7 +333,7 @@ class MainWindow(QMainWindow):
                        gearG=self.gearCombo.checked_items_data(),
                        lengthG=self.vesselCombo.checked_items_data(),
                        specG=self.speciesCombo.checked_items_data(),
-                       locationG=self.locationText.toPlainText().split('\n'),
+                       locationG= scl(self.locationText.toPlainText()),
                        limit=self.limitEdit.text(),
                        offset=self.offsetEdit.text(),
                        myVessel=self.myVessel.isChecked(),
@@ -347,7 +348,7 @@ class MainWindow(QMainWindow):
                        lengthG = self.vesselCombo.checked_items_data(),
                        gearG = self.gearCombo.checked_items_data(),
                        specG = self.speciesCombo.checked_items_data(),
-                       locationG =  self.locationText.toPlainText().split('\n'),
+                       locationG = scl(self.locationText.toPlainText()),
                        limit = self.limitEdit.text(),
                        offset = self.offsetEdit.text(),
                        myVessel = self.myVessel.isChecked(),
@@ -392,19 +393,25 @@ class MainWindow(QMainWindow):
         kpi_01(self.vesselCombo.checked_items_data(),
                self.gearCombo.checked_items_data(),
                self.speciesCombo.checked_items_data(),
-               self.locationText.toPlainText().split('\n'),
+               scl(self.locationText.toPlainText()),
                dateArray)
 
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
         #print()
-        kpi_02(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), self.locationText.toPlainText().split('\n'), int(self.aggEdit.text()), int(self.resEdit.text()))
+        kpi_02(self.stopDateEdit.date(),
+               self.vesselCombo.checked_items_data(),
+               self.gearCombo.checked_items_data(),
+               self.speciesCombo.checked_items_data(),
+               scl(self.locationText.toPlainText()),
+               int(self.aggEdit.text()),
+               int(self.resEdit.text()))
 
 
     def kpi05_button_clicked(self):
         # Produce graphics and output for annual Catch and catch value 
         print()
-       # kpi_05(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        #kpi_05(self.stopDateEdit.date(), self.vesselCombo.checked_items_data(), self.gearCombo.checked_items_data(), self.speciesCombo.checked_items_data(), int(self.aggEdit.text()), int(self.resEdit.text()))
 
 
     def closeEvent(self, event):
