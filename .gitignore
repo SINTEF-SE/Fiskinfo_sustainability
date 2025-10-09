@@ -2,6 +2,7 @@ output/
 __pycache__/
 .idea/
 Pipfile
+Pipfile.lock
 csvTest.csv
 csvtestFile.csv
 jsonTestFile.json
