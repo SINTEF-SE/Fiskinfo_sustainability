@@ -104,10 +104,9 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, lim
     if lengthG[0] == "All": lengthG = [] # allVesselGroups
     if specG[0] == "All": specG = [] #allSpeciesGroups
     if locationG[0] == "All": locationG = []
-    #print(f"Gear group: {gearG}"), print(f"Length group: {lengthG}"), print(f"Species group: {specG}"),print(f"Location group: {locationG}")
 
-    if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00Z"
-    if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T00:00:00Z"
+    if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00.000Z"
+    if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T23:59:59.999Z"  # Include last day, when we use end of month or year we expect to include that day
     
     if requestType == trips or requestType == haul: 
         if len(lengthG) > 0: params["vesselLengthGroups[]"] = lengthG
@@ -150,7 +149,7 @@ def get_access_token():
 
 ### External methods ################
 
-def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True) -> None:
+def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True, append: bool = True) -> None:
     """
     Convert JSON response to CSV file using pandas DataFrame
 
@@ -167,7 +166,10 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
         # Write to CSV, handle encoding for Norwegian characters
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        if append:
+            df.to_csv(output_file, index=False, encoding='utf-8-sig', mode='a', header=not os.path.exists(output_file) or os.path.getsize(output_file) == 0)
+        else:
+            df.to_csv(output_file, index=False, encoding='utf-8-sig', mode='w', header=True)
         logging.info(f"CSV file saved: {output_file}")
 
     except Exception as e:
@@ -178,11 +180,11 @@ def get_prepared_request(url="", header= None, params= None, debug = False, csvF
     global itemDict
 
     if url != "" and header is not None and params is not None:
-        utc_time = datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')  # ISO 8601 format with 'Z' for UTC
+        utc_time = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')  # ISO 8601 format with 'Z' for UTC
         try:
             response = session.get(url, headers=header, params=params)
             response.raise_for_status()
-            __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log")   # log api requests to file
+            __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log.tsv")   # log api requests to file
             if response.status_code >= 400:
                 logging.error(f"AUTHORIZATION REQUIRED!!! Error code:{response.status_code}")
                 return 0

@@ -1,15 +1,8 @@
-# ignore folders
-Kopi/
-__pycache__/
-AppIcons/
-data/
 output/
-
-# ignore json and csv output files
-*.csv
-*.json
-
-#ignore other files
-*.xlsx
-
-
+__pycache__/
+.idea/
+Pipfile
+Pipfile.lock
+csvTest.csv
+csvtestFile.csv
+jsonTestFile.json

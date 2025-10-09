@@ -2,11 +2,21 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import re
+
+def splitCatchLocation(field_text):
+    return re.split(r'[ ,\n]+', field_text)
+
+def emptyArrToAlle(arrgroup):
+    if len(arrgroup) == 0:
+        return ["Alle"]
+    else:
+        return arrgroup
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
-def getDatesArray(eDate, span, periods):  
-        endDateArray = [] #['endDate']          # holds the end dates for all requests
-        startDateArray = [] # ['startDate']     # PGA: the strings break the KPI calculations
+def getDatesArray(eDate, span, periods):
+        endDateArray = []   # holds the end dates for all requests
+        startDateArray = [] # holds the start dates for all requests
         dateArray = []
 
         for m in reversed(range(0,periods)):
@@ -14,8 +24,6 @@ def getDatesArray(eDate, span, periods):
 
         for d in endDateArray:
                 startDateArray.append(d.addMonths(-span))   
-
-        #print(endDateList) 
 
         dateArray.append(startDateArray)
         dateArray.append(endDateArray)  
