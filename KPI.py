@@ -37,7 +37,7 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
     print("AvEeoi array: ", avEeoiArray)
     print ("Antall båter. ", nVessels)
 
-    jsonArray = []
+    '''jsonArray = []
     csvArray = []
     item = r.Output('EEOI', 'Gadus  Njord', 1, "", 3, 4, myEeoiArray)
     data = item.createJsonItem()
@@ -51,12 +51,14 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
     jsonArray.append(data)
 
     json_data = r.createJson(jsonArray, 'jsonTestFile.json')
+    toCsvFile = "output/kpi_01.csv" 
+    r.json_to_pandas_csv(jsonArray, toCsvFile)  
    # r.jsonToCsv(json_data, 'testCSVfil.csv')
     
     # create title for plot
     span = monthsBetweenQdates(startDateList[0], endDateList[0])
     title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
-    plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")
+    plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")'''
 
     return retArray
 
