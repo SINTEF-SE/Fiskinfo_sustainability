@@ -395,6 +395,12 @@ class MainWindow(QMainWindow):
                self.speciesCombo.checked_items_data(),
                self.locationText.toPlainText().split('\n'),
                dateArray)
+        
+        item = r.Output('Gadus  Njord', 1, self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()), kpi01Array)    
+        jsonArray = []
+        data = item.createJsonItem()
+        jsonArray.append(data)
+        r.createJson(jsonArray, 'jsonTestFile.json')
 
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
