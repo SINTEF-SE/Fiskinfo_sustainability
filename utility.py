@@ -1,8 +1,10 @@
 
-
 import matplotlib.pyplot as plt
 import numpy as np
+from PySide6.QtCore import QDate
+import datetime
 
+# split catch location text into list of locations based on comma and line breaks
 def splitCatchLocation(field_text):
     c_locs = []
     for loc_r in field_text.split('\n'):
@@ -11,11 +13,26 @@ def splitCatchLocation(field_text):
             if loc != "": c_locs.append(loc)
     return c_locs
 
+# If the group array is empty, return an array with "Alle" for the title plot
 def emptyArrToAlle(arrgroup):
     if len(arrgroup) == 0:
         return ["Alle"]
     else:
         return arrgroup
+
+# Get a group of months date between two dates for the haul API
+def getMonthTimestamps(start_qdate, end_qdate):
+    """
+    Returns a list of UTC (Zulu) timestamps in milliseconds for each month between start_qdate and end_qdate (inclusive).
+    """
+    timestamps = []
+    current = QDate(start_qdate.year(), start_qdate.month(), 1)
+    end = QDate(end_qdate.year(), end_qdate.month(), 1)
+    while current <= end: # only add last month once
+        dt = datetime.datetime(current.year(), current.month(), current.day(), tzinfo=datetime.timezone.utc)
+        timestamps.append(dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z')
+        current = current.addMonths(1)
+    return timestamps
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
 def getDatesArray(eDate, span, periods):
