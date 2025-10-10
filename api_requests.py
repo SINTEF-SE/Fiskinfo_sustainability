@@ -149,7 +149,7 @@ def get_access_token():
 
 ### External methods ################
 
-def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True, append: bool = True) -> None:
+def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True, append: bool = False) -> None:
     """
     Convert JSON response to CSV file using pandas DataFrame
 
@@ -176,7 +176,7 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
         logging.error(f"Error writing CSV file: {str(e)}")
 
 # Splitting up the request into one that uses prepared url, header and params, suitable for replaying a stored request later, enabling replaying api- scenarios
-def get_prepared_request(url=None, header=None, params=None, info_log=False, csvFile ="", ):
+def get_prepared_request(url=None, header=None, params=None, info_log=False, csvFile ="", appendCSV=False):
     global itemDict
 
     logging.info(f"REST API: {url}, header: {header}, params: {params} info_log: {info_log}, csvFile: {csvFile}")
@@ -200,7 +200,8 @@ def get_prepared_request(url=None, header=None, params=None, info_log=False, csv
         try:
             data = response.json()
             if data != None and csvFile != "":  # Store json response to CSV file if file name provided
-                json_to_pandas_csv(data, csvFile)
+                json_to_pandas_csv(data, csvFile, append=appendCSV)
+                logging.info(f"JSON data stored to CSV file: {csvFile}")
 
             if isinstance(data, float):
                 if info_log: logging.info(f"Float data received: {data}")
@@ -220,8 +221,8 @@ def get_prepared_request(url=None, header=None, params=None, info_log=False, csv
         logging.error(f"Missing url {url}, header {header} or parameters {params} needed for request")
     return 0
 
-def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = [], gearG = [], specG = [], locationG = [], limit = 0, offset = 0, myVessel = False, info_log = False, csvFile =""):
+def get_request(request_type, sDate=QDate(), eDate=QDate(), lengthG=[], gearG=[], specG=[], locationG=[], limit=0, offset=0, myVessel=False, info_log=False, csvFile ="", appendCSV=False):
     url = base_url + request_type
     header = {'accept': 'application/json'}   
     params = __getParams(request_type, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel)
-    return get_prepared_request(url, header, params, info_log, csvFile)
+    return get_prepared_request(url, header, params, info_log, csvFile, appendCSV)
