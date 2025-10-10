@@ -2,10 +2,14 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import re
 
 def splitCatchLocation(field_text):
-    return re.split(r'[ ,\n]+', field_text)
+    c_locs = []
+    for loc_r in field_text.split('\n'):
+        for loc_c in loc_r.split(','):
+            loc = loc_c.strip()
+            if loc != "": c_locs.append(loc)
+    return c_locs
 
 def emptyArrToAlle(arrgroup):
     if len(arrgroup) == 0:

@@ -105,10 +105,17 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, lim
     if specG[0] == "All": specG = [] #allSpeciesGroups
     if locationG[0] == "All": locationG = []
 
-    if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00.000Z"
-    if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T23:59:59.999Z"  # Include last day, when we use end of month or year we expect to include that day
-    
-    if requestType == trips or requestType == haul: 
+    sdate_z = "2000-01-01T00:00:00.000Z"
+    if sDate != QDate(): sdate_z = f"{sDate.toPython()}"+"T00:00:00.000Z"
+    edate_z = "2025-12-31T23:59:59.999Z" # When we use end of month or year we expect to include last day
+    if eDate != QDate(): edate_z = f"{eDate.toPython()}" + "T23:59:59.999Z"
+    if requestType == haul:
+        params['months[]'] = [sdate_z, edate_z] # make intermittent months here
+    else:
+        params["startDate"] = sdate_z
+        params["endDate"] = edate_z
+
+    if requestType == trips or requestType == haul:
         if len(lengthG) > 0: params["vesselLengthGroups[]"] = lengthG
         if myVessel: params["fiskeridirVesselIds[]"] = fiskdirId
         if len(gearG) > 0: params['gearGroupIds[]'] = gearG
@@ -176,12 +183,14 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
         logging.error(f"Error writing CSV file: {str(e)}")
 
 # Splitting up the request into one that uses prepared url, header and params, suitable for replaying a stored request later, enabling replaying api- scenarios
-def get_prepared_request(url="", header= None, params= None, debug = False, csvFile = "", ):
+def get_prepared_request(url="", header= None, params= None, debug_log = False, csvFile ="", ):
     global itemDict
 
+    print(f"url: {url}, header: {header}, params: {params} debug: {debug_log}, csvFile: {csvFile}")
     if url != "" and header is not None and params is not None:
         utc_time = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')  # ISO 8601 format with 'Z' for UTC
         try:
+            if debug_log:  logging.debug(f"URL: {url}, parameters: {params}")
             response = session.get(url, headers=header, params=params)
             response.raise_for_status()
             __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log.tsv")   # log api requests to file
@@ -202,12 +211,12 @@ def get_prepared_request(url="", header= None, params= None, debug = False, csvF
                 json_to_pandas_csv(data, csvFile)
 
             if isinstance(data, float):
-                if debug: logging.debug(f"Float data received: {data}")
+                if debug_log: logging.debug(f"Float data received: {data}")
                 return data
 
             if data != None:
                 itemDict = json.loads(response.text)
-                if debug: logging.debug(f"#Objects: {len(itemDict)}\nContent (JSON): {json.dumps(data, indent=2)}")
+                if debug_log: logging.debug(f"#Objects: {len(itemDict)}\nContent (JSON): {json.dumps(data, indent=2)}")
                 return itemDict
             else:
                 logging.error("No payload data received")
@@ -219,8 +228,8 @@ def get_prepared_request(url="", header= None, params= None, debug = False, csvF
         logging.error(f"Missing url {url}, header {header} or parameters {params} needed for request")
     return 0
 
-def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = [], gearG = [], specG = [], locationG = [], limit = 0, offset = 0, myVessel = False, debug = False, csvFile =""):
+def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = [], gearG = [], specG = [], locationG = [], limit = 0, offset = 0, myVessel = False, debug_log = False, csvFile =""):
     url = base_url + request_type
     header = {'accept': 'application/json'}   
     params = __getParams(request_type, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel)
-    return get_prepared_request(url, header, params, debug, csvFile)
+    return get_prepared_request(url, header, params, debug_log, csvFile)

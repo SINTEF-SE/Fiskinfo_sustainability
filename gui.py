@@ -254,36 +254,36 @@ class MainWindow(QMainWindow):
     
     def getGear_button_clicked(self):
         toCsvFile = "output/gear.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.gear, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.gear, debug_log = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getGearGroups_button_clicked(self):
         toCsvFile = "output/gearGroups.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.gear_groups, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.gear_groups, debug_log = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getGearMainGroups_button_clicked(self):
         toCsvFile = "output/gearMainGroups.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.gear_main_groups, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.gear_main_groups, debug_log = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getVessels_button_clicked(self):
         toCsvFile = "output/vessels.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.vessels, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.vessels, debug_log = self.debugOutput.isChecked(), csvFile = toCsvFile)
         #if jsonData: jsonToCsv(jsonData, "csvTest.csv")
 
     def getVesselsFuel_button_clicked(self):
         toCsvFile = "output/vesselsFuel.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.fuel, self.startDateEdit.date(), self.stopDateEdit.date(), debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.fuel, self.startDateEdit.date(), self.stopDateEdit.date(), debug_log = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getVesselsLiveFuel_button_clicked(self):
         toCsvFile = "output/vesselsLiveFuel.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.live_fuel, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.live_fuel, debug_log = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getVesselsBenchmarks_button_clicked(self):
         toCsvFile = "output/benchmarks.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.vessel_benchmarks, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.vessel_benchmarks, debug_log = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getUser_button_clicked(self):
         toCsvFile = "output/user.csv" if self.storeCsv.isChecked() else ""
-        ep.get_request(ep.user, debug = self.debugOutput.isChecked(), csvFile = toCsvFile)
+        ep.get_request(ep.user, debug_log = self.debugOutput.isChecked(), csvFile = toCsvFile)
 
     def getTrips_button_clicked(self):
         toCsvFile = "output/trips.csv" if self.storeCsv.isChecked() else ""
@@ -295,7 +295,7 @@ class MainWindow(QMainWindow):
                        lengthG = self.vesselCombo.checked_items_data(),
                        specG = self.speciesCombo.checked_items_data(),
                        myVessel = self.myVessel.isChecked(),
-                       debug = self.debugOutput.isChecked(),
+                       debug_log = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def getAvTripBenchmarks_button_clicked(self):
@@ -306,7 +306,7 @@ class MainWindow(QMainWindow):
                        gearG = self.gearCombo.checked_items_data(),
                        lengthG = self.vesselCombo.checked_items_data(),
                        myVessel = self.myVessel.isChecked(),
-                       debug = self.debugOutput.isChecked(),
+                       debug_log = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def getEEOI_button_clicked(self):
@@ -317,11 +317,11 @@ class MainWindow(QMainWindow):
                        gearG=self.gearCombo.checked_items_data(),
                        lengthG=self.vesselCombo.checked_items_data(),
                        specG=self.speciesCombo.checked_items_data(),
-                       locationG=self.locationText.toPlainText().split('\n'),
+                       locationG=splitCatchLocation(self.locationText.toPlainText()),
                        limit=self.limitEdit.text(),
                        offset=self.offsetEdit.text(),
                        myVessel=self.myVessel.isChecked(),
-                       debug = self.debugOutput.isChecked(),
+                       debug_log = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def getAvEEOI_button_clicked(self):
@@ -332,11 +332,11 @@ class MainWindow(QMainWindow):
                        gearG=self.gearCombo.checked_items_data(),
                        lengthG=self.vesselCombo.checked_items_data(),
                        specG=self.speciesCombo.checked_items_data(),
-                       locationG=self.locationText.toPlainText().split('\n'),
+                       locationG=splitCatchLocation(self.locationText.toPlainText()),
                        limit=self.limitEdit.text(),
                        offset=self.offsetEdit.text(),
                        myVessel=self.myVessel.isChecked(),
-                       debug = self.debugOutput.isChecked(),
+                       debug_log = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def getHaul_button_clicked(self):
@@ -347,11 +347,11 @@ class MainWindow(QMainWindow):
                        lengthG = self.vesselCombo.checked_items_data(),
                        gearG = self.gearCombo.checked_items_data(),
                        specG = self.speciesCombo.checked_items_data(),
-                       locationG =  self.locationText.toPlainText().split('\n'),
+                       locationG =  splitCatchLocation(self.locationText.toPlainText()),
                        limit = self.limitEdit.text(),
                        offset = self.offsetEdit.text(),
                        myVessel = self.myVessel.isChecked(),
-                       debug = self.debugOutput.isChecked(),
+                       debug_log = self.debugOutput.isChecked(),
                        csvFile = toCsvFile)
 
     def auth_button_clicked(self):
@@ -393,13 +393,19 @@ class MainWindow(QMainWindow):
         kpi_01(self.vesselCombo.checked_items_data(),
                self.gearCombo.checked_items_data(),
                self.speciesCombo.checked_items_data(),
-               self.locationText.toPlainText().split('\n'),
+               splitCatchLocation(self.locationText.toPlainText()),
                dateArray)
 
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
         #print()
-        kpi_02(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), self.locationText.toPlainText().split('\n'), int(self.aggEdit.text()), int(self.resEdit.text()))
+        kpi_02(self.stopDateEdit.date(),
+               self.vesselCombo.currentText(),
+               self.gearCombo.currentText(),
+               self.speciesCombo.currentText(),
+               splitCatchLocation(self.locationText.toPlainText()),
+               int(self.aggEdit.text()),
+               int(self.resEdit.text()))
 
 
     def kpi05_button_clicked(self):
