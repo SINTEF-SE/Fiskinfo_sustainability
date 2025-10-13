@@ -104,7 +104,7 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, lim
     if lengthG[0] == "All": lengthG = [] # allVesselGroups
     if specG[0] == "All": specG = [] #allSpeciesGroups
     if locationG[0] == "All": locationG = []
-    #print(f"Gear group: {gearG}"), print(f"Length group: {lengthG}"), print(f"Species group: {specG}"),print(f"Location group: {locationG}")
+    print(f"Gear group: {gearG}"), print(f"Length group: {lengthG}"), print(f"Species group: {specG}"),print(f"Location group: {locationG}")
 
     if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00Z"
     if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T00:00:00Z"
@@ -125,7 +125,7 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, lim
 
     if limit != 0: params["limit"] = f"{limit}"
     if offset != 0: params["offset"] = f"{offset}"
-
+    print('params:', params)
     return params
 
 # Not used or tested

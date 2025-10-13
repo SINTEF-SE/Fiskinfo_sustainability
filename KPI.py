@@ -2,13 +2,11 @@ from utility import*
 import api_requests as ep
 from collections import Counter
 import reports as r
+from PySide6.QtCore import QDate, QDateTime
 
 def kpi_01(lengthG, gearG, specG, locG, dateArray):
     # Get Norwegian name of length group
     norskLgroup = nlg(lengthG)
-   
-    #Calculate list of end dates for all periods
-    #dList = sliWin(eDate, span, periods)
 
     # get eeio for all sliding windows
     retArray = []
@@ -26,10 +24,7 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
     entries = len(endDateList)
     retArray.append(myEeoiArray)
     retArray.append(avEeoiArray)
-    print('Array', retArray)
-    # Calculate start date
-   # sDate = eDate.addMonths(-span*periods)
-   
+       
     # Find total number of vessels in in group
     nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG, locG)
     
@@ -60,14 +55,11 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
     title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
     plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")'''
 
-    return retArray
+    return retArray, nVessels
 
 def kpi_02(lengthG, gearG, specG, locG, dateArray):
     # Get Norwegian name of lenght group
     norskLgroup = nlg(lengthG)
-   
-    #Calculate list of end dates for all periods
-    #dList = sliWin(eDate, span, periods)
 
     # get fui for all sliding windows
     retArray = []
@@ -94,7 +86,7 @@ def kpi_02(lengthG, gearG, specG, locG, dateArray):
     print("AvFui array: ", avFuiArray)
     print ("Antall båter. ", nVessels)
 
-    return retArray
+    return retArray, nVessels
 
     # create title for plot
    # title = "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
@@ -151,8 +143,10 @@ def getTotalVessels(request, sDate, eDate, lengthG, gearG, specG, locG):
     allItems = []
 
     while (nItems == 100):
+        print('request:', request, 'sDate:', sDate, 'eDate:', eDate, 'lengthG:', lengthG, 'gearG:', gearG, 'specG', specG, 'location', locG)
         itemDict = ep.get_request(request, sDate, eDate, lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, limit = 100, offset = offset)
-        allItems += itemDict
+        if itemDict != 0:
+            allItems += itemDict
         nItems = len(itemDict)
         offset += 100
 

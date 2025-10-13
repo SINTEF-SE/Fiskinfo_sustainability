@@ -8,7 +8,7 @@ from typing import Dict, Any
 import os
 
 class Output():
-    def __init__(self, vesselId, noRefVessels, group, gear, specie, span, periods, dataArray):
+    def __init__(self, vesselId, noRefVessels, group, gear, specie, span, periods, datesArray, dataArray):
         
         super().__init__()
 
@@ -19,6 +19,7 @@ class Output():
         self.specie = specie
         self.span = span
         self.noPeriods = periods
+        self.datesArray = datesArray
         self.dataArray = dataArray
 
     def createJsonItem(self):
@@ -37,41 +38,20 @@ class Output():
             dataSetName.append(array[0])
             array.pop(0)        # remove first item from array
 
-        print ('DataSetName: ', dataSetName)
-        print(self.dataArray)
-        item_array = []
         noItems = len(self.dataArray)
         itemIndex = list(range(0, noItems))             # list of item indexes
         noDataPoints = len(self.dataArray[0])       
         pointsIndex = list(range(0, noDataPoints))      # list of dataPoint indexes
 
-        print('items: ', noItems, 'Points :', noDataPoints)
-        print(itemIndex, pointsIndex)
-
-        
         jsonArray = []
+        startDates= self.datesArray[0]
+        endDates= self.datesArray[1]
         for pIx in pointsIndex:
-            jsonLine = []
-            jsonLine.append({'startDate': '01-12-2025', 'endDate': '01-12-2025'})
-           # jsonLine.append({'endDate': '01-12-2025'})
+            jsonLine = {'startDate': startDates[pIx].toString('dd-MM-yyyy'), 'endDate':  endDates[pIx].toString('dd-MM-yyyy')}
             for iIx in itemIndex:
-                jsonLine.append({f"{dataSetName[iIx]}": self.dataArray[iIx][pIx]})
+                jsonLine[dataSetName[iIx]] = self.dataArray[iIx][pIx]
 
             jsonArray.append(jsonLine)
-
-        print (jsonArray)
-
-        #for pIx in pointsIndex:
-         #   item_array.append({'StartDato': '01-12-2025', 'Slutt Dato': '01-12-2025', jsonArray[pIx]})
-        
-
-        '''for array in self.dataArray:
-            for i in array:
-                item_array.append({self.dataArray[0][0]: '01-12-2025', self.dataArray[1][0]: '01-12-2025', self.dataArray[2][0]: item})
-            item_array.append({'startDate': '01-12-2025', 'endDate': '01-12-2025', 'value': item})'''
-
-        #print (item_array)
-        #data['dataArray'] = item_array
 
         data['dataArray'] = jsonArray
 

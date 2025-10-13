@@ -387,16 +387,24 @@ class MainWindow(QMainWindow):
         
     def kpi01_button_clicked(self):
         # Produce graphics and output for EEOI
-        #dateArray = getDatesArray(self.stopDateEdit.date(), self.startDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text())) # old
         dateArray = getDatesArray(self.stopDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text())) # getDatesArray takes only 3 arguments
         print(dateArray)
-        kpi_01(self.vesselCombo.checked_items_data(),
+        kpi01Array, nVessels = kpi_01(self.vesselCombo.checked_items_data(),
                self.gearCombo.checked_items_data(),
                self.speciesCombo.checked_items_data(),
                self.locationText.toPlainText().split('\n'),
                dateArray)
         
-        item = r.Output('Gadus  Njord', 1, self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), int(self.aggEdit.text()), int(self.resEdit.text()), kpi01Array)    
+        item = r.Output('Gadus  Njord', 
+                nVessels, 
+                self.vesselCombo.currentText(), 
+                self.gearCombo.currentText(), 
+                self.speciesCombo.currentText(), 
+                int(self.aggEdit.text()), 
+                int(self.resEdit.text()),
+                dateArray, 
+                kpi01Array)    
+        
         jsonArray = []
         data = item.createJsonItem()
         jsonArray.append(data)
@@ -404,8 +412,27 @@ class MainWindow(QMainWindow):
 
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
-        #print()
-        kpi_02(self.stopDateEdit.date(), self.vesselCombo.currentText(), self.gearCombo.currentText(), self.speciesCombo.currentText(), self.locationText.toPlainText().split('\n'), int(self.aggEdit.text()), int(self.resEdit.text()))
+        dateArray = getDatesArray(self.stopDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text()))
+        kpi02Array, nVessels = kpi_02(self.vesselCombo.checked_items_data(), 
+                self.gearCombo.checked_items_data(), 
+                self.speciesCombo.checked_items_data(), 
+                self.locationText.toPlainText().split('\n'), 
+                dateArray)
+        
+        item = r.Output('Gadus  Njord', 
+                nVessels, 
+                self.vesselCombo.currentText(), 
+                self.gearCombo.currentText(), 
+                self.speciesCombo.currentText(), 
+                int(self.aggEdit.text()), 
+                int(self.resEdit.text()), 
+                dateArray,
+                kpi02Array)    
+        
+        jsonArray = []
+        data = item.createJsonItem()
+        jsonArray.append(data)
+        r.createJson(jsonArray, 'jsonTestFile.json')
 
 
     def kpi05_button_clicked(self):

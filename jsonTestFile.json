@@ -2,49 +2,37 @@
     {
         "vesselName": "Gadus  Njord",
         "callSign": "",
-        "numberOfRefVessels": 1,
+        "numberOfRefVessels": 131,
         "group": "TwentyEightAndAbove",
         "gear": "Trawl",
-        "specie": "",
-        "aggregatedMonths": 2,
-        "NumberOfPeriods": 3,
+        "specie": "All",
+        "aggregatedMonths": 3,
+        "NumberOfPeriods": 4,
         "dataArray": [
-            [
-                {
-                    "startDate": "01-12-2025",
-                    "endDate": "01-12-2025"
-                },
-                {
-                    "eeoi": 0.27367113147872324
-                },
-                {
-                    "avEeoi": 0.4425447117982182
-                }
-            ],
-            [
-                {
-                    "startDate": "01-12-2025",
-                    "endDate": "01-12-2025"
-                },
-                {
-                    "eeoi": 0.4160440593516909
-                },
-                {
-                    "avEeoi": 0.5528586631675223
-                }
-            ],
-            [
-                {
-                    "startDate": "01-12-2025",
-                    "endDate": "01-12-2025"
-                },
-                {
-                    "eeoi": 0.3484607399146112
-                },
-                {
-                    "avEeoi": 0.5759482059321628
-                }
-            ]
+            {
+                "startDate": "31-12-2023",
+                "endDate": "31-03-2024",
+                "FUI": 868.1000168802786,
+                "avFUI": 836.7938004175528
+            },
+            {
+                "startDate": "30-03-2024",
+                "endDate": "30-06-2024",
+                "FUI": 634.57121565362,
+                "avFUI": 1172.7750576671642
+            },
+            {
+                "startDate": "30-06-2024",
+                "endDate": "30-09-2024",
+                "FUI": 791.2346982310678,
+                "avFUI": 1231.1913215319885
+            },
+            {
+                "startDate": "30-09-2024",
+                "endDate": "31-12-2024",
+                "FUI": 1332.7429397708124,
+                "avFUI": 1528.0504874112498
+            }
         ]
     }
 ]
