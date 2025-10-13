@@ -1,16 +1,12 @@
 import requests
 import logging
-
-from requests import get
-from requests import post
 import json
 from PySide6.QtCore import QDate
 from datetime import datetime, timezone
 import pandas as pd
 from typing import Dict, Any
 import os
-
-
+from utility import getMonthTimestamps
 
 #app_Token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IkNCMDJGMDMzREVGMUYwOTc3RDQxNjEyRTYwQTM1RDI2IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2lkLmJhcmVudHN3YXRjaC5ubyIsIm5iZiI6MTc1MDY2NDYxMCwiaWF0IjoxNzUwNjY0NjEwLCJleHAiOjE3NTA2NjgyMTAsImF1ZCI6ImFwaSIsInNjb3BlIjpbIm9wZW5pZCIsImFwaSJdLCJhbXIiOlsicHdkIl0sImNsaWVudF9pZCI6ImZoZi1kYXRhZmFuZ3N0Iiwic3ViIjoiMGIzZGNlN2YtMjMzYS00NDUwLWE4ODItYTY5ZTA2ZWE0N2U0IiwiYXV0aF90aW1lIjoxNzUwMzQwMDk2LCJpZHAiOiJsb2NhbCIsInByZWZlcnJlZF91c2VybmFtZSI6ImZpc2tpbmZvLm5vcmRAZ21haWwuY29tIiwic2lkIjoiNEZBMjI0MzBCOURFNzVENDlENEE4QjlBRDBBNDg1Q0QifQ.AWIfRxrPi_up1uE2HZzhdpJiYYYS96itSF8Xp2t7OdqAu3z32AMG8CN3Ezfhr8kF460GLWBjJb_JTwVA4iI86Vrd5Zvu16nKfdfX7SXgkSTyBEv4VBxf9tw7ExYqVkZv-CoxZm4LfcQmZKS1uYzNza_p9N9BcjYigH9A3BrUKSsxIvD2Fj5Y7cxy9niKiY2iLgOv0ZpCHweSeu1TpliJuqNk2ma1YFeNw5Kh_6z2Ke_EOV257BVJia7PnpZkRGdgeA0AHsNJdwK45eD2sKMBRS3l5MU7k0aMjuFCxIwlXd6cvPj-AoU9ALdR5yha8T78uozNgFvYCMtqQ8a8aIw9oQ"
 app_Token = "eyJhbGciOiJSUzI1NiIsImtpZCI6IkNCMDJGMDMzREVGMUYwOTc3RDQxNjEyRTYwQTM1RDI2IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2lkLmJhcmVudHN3YXRjaC5ubyIsIm5iZiI6MTc1MTQ1MjgxMywiaWF0IjoxNzUxNDUyODEzLCJleHAiOjE3NTE0NTY0MTMsImF1ZCI6ImFwaSIsInNjb3BlIjpbIm9wZW5pZCIsImFwaSJdLCJhbXIiOlsicHdkIl0sImNsaWVudF9pZCI6ImZoZi1kYXRhZmFuZ3N0Iiwic3ViIjoiMGIzZGNlN2YtMjMzYS00NDUwLWE4ODItYTY5ZTA2ZWE0N2U0IiwiYXV0aF90aW1lIjoxNzUxMjgwNTg3LCJpZHAiOiJsb2NhbCIsInByZWZlcnJlZF91c2VybmFtZSI6ImZpc2tpbmZvLm5vcmRAZ21haWwuY29tIiwic2lkIjoiNUI0NTE2RDc2NUJDMTk3MjRFOUFDQUYxMzJCQ0VEQUQifQ.xYIKuLmqQrYPauo3gSdQeBEnBIMbMajPAXxtq0zQzc3RRxN9f07b-ZerRNE2Ts2VnDn9EH_5SNqy8uSAD0TDVaQcwIUOjcR2_FUC0W1ZcRMjiPXOfPYGZ5_M6zdnhedvN0aylDEqQP8e3Aw7AeP2cyjac7eAVKaJjFsZZX6On7ffyWDisvcTIApmyAC5Vng4dvQF1-gc8BTTm0HJPJ1Nh4WkFKF3mi3FC224zLWDKBybUzwCJ1wyS5gASuYaiX4u7e58T4Fm6pEmsPMQl4qeyIeNdhD9LYK6OyfHVrCfA-EpcT40UrlTEej8Usr2xPg28cJj3cmnl1ElCIUHct7ZgQ"
@@ -75,7 +71,7 @@ itemDict = json.loads('[]')
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def __logResponse(response, *args, **kwargs):
-    logging.info(f"Response URL: {response.url}")
+    logging.info(f"API Request: {response.url}")
     logging.info(f"Response Status Code: {response.status_code}, Content Length: {len(response.content)} bytes")
     #logging.info(f"Response Headers: {response.headers}")
 
@@ -88,7 +84,7 @@ def __logRequests(time = "", url= "", header = "", params = "", response = None,
             with open(log_file, 'a') as f:
                 if not os.path.exists(log_file) or os.path.getsize(log_file) == 0: 
                     # Append header if file does not exist or is empty
-                    f.write(f"UTCtime{sep}URL{sep}Header{sep}Params{sep}APIcall{sep}Status{sep}Bytes\n")
+                    f.write(f"UTC{sep}URL{sep}Header{sep}Params{sep}APIcall{sep}Status{sep}Bytes\n")
                 f.write(f"{time}{sep}{url}{sep}{header}{sep}{params}{sep}{response.url}{sep}{response.status_code}{sep}{len(response.content)}\n")
         except IOError as e:
             logging.error(f"Error writing to file {log_file}: {e}")
@@ -104,12 +100,15 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, lim
     if lengthG[0] == "All": lengthG = [] # allVesselGroups
     if specG[0] == "All": specG = [] #allSpeciesGroups
     if locationG[0] == "All": locationG = []
-    print(f"Gear group: {gearG}"), print(f"Length group: {lengthG}"), print(f"Species group: {specG}"),print(f"Location group: {locationG}")
 
-    if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}"+"T00:00:00Z"
-    if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}"+"T00:00:00Z"
-    
-    if requestType == trips or requestType == haul: 
+    if requestType == haul: # Uses differnt time setting: months[]
+        params['months[]'] = getMonthTimestamps(sDate, eDate) # add intermittent months here
+    else:
+        if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}" + "T00:00:00.000Z"
+        # When we use end of month or year we expect to include last day
+        if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}" + "T23:59:59.999Z"
+
+    if requestType == trips or requestType == haul:
         if len(lengthG) > 0: params["vesselLengthGroups[]"] = lengthG
         if myVessel: params["fiskeridirVesselIds[]"] = fiskdirId
         if len(gearG) > 0: params['gearGroupIds[]'] = gearG
@@ -150,7 +149,7 @@ def get_access_token():
 
 ### External methods ################
 
-def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True) -> None:
+def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True, append: bool = False) -> None:
     """
     Convert JSON response to CSV file using pandas DataFrame
 
@@ -167,22 +166,26 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
         # Write to CSV, handle encoding for Norwegian characters
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        if append:
+            df.to_csv(output_file, index=False, encoding='utf-8-sig', mode='a', header=not os.path.exists(output_file) or os.path.getsize(output_file) == 0)
+        else:
+            df.to_csv(output_file, index=False, encoding='utf-8-sig', mode='w', header=True)
         logging.info(f"CSV file saved: {output_file}")
 
     except Exception as e:
         logging.error(f"Error writing CSV file: {str(e)}")
 
 # Splitting up the request into one that uses prepared url, header and params, suitable for replaying a stored request later, enabling replaying api- scenarios
-def get_prepared_request(url="", header= None, params= None, debug = False, csvFile = "", ):
+def get_prepared_request(url=None, header=None, params=None, info_log=False, csvFile ="", appendCSV=False):
     global itemDict
 
-    if url != "" and header is not None and params is not None:
-        utc_time = datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')  # ISO 8601 format with 'Z' for UTC
+    logging.info(f"REST API: {url}, header: {header}, params: {params} info_log: {info_log}, csvFile: {csvFile}")
+    if url is not None and header is not None and params is not None:
+        utc_time = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')  # ISO 8601 format with 'Z' for UTC
         try:
             response = session.get(url, headers=header, params=params)
             response.raise_for_status()
-            __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log")   # log api requests to file
+            __logRequests(utc_time, url, header, params, response, log_file="output/api_request_log.tsv")   # log api requests to file
             if response.status_code >= 400:
                 logging.error(f"AUTHORIZATION REQUIRED!!! Error code:{response.status_code}")
                 return 0
@@ -197,15 +200,16 @@ def get_prepared_request(url="", header= None, params= None, debug = False, csvF
         try:
             data = response.json()
             if data != None and csvFile != "":  # Store json response to CSV file if file name provided
-                json_to_pandas_csv(data, csvFile)
+                json_to_pandas_csv(data, csvFile, append=appendCSV)
+                logging.info(f"JSON data stored to CSV file: {csvFile}")
 
             if isinstance(data, float):
-                if debug: logging.debug(f"Float data received: {data}")
+                if info_log: logging.info(f"Float data received: {data}")
                 return data
 
             if data != None:
                 itemDict = json.loads(response.text)
-                if debug: logging.debug(f"#Objects: {len(itemDict)}\nContent (JSON): {json.dumps(data, indent=2)}")
+                if info_log: logging.info(f"#Objects: {len(itemDict)}\nContent (JSON): {json.dumps(data, indent=2)}")
                 return itemDict
             else:
                 logging.error("No payload data received")
@@ -217,8 +221,8 @@ def get_prepared_request(url="", header= None, params= None, debug = False, csvF
         logging.error(f"Missing url {url}, header {header} or parameters {params} needed for request")
     return 0
 
-def get_request(request_type, sDate = QDate(), eDate = QDate(), lengthG = [], gearG = [], specG = [], locationG = [], limit = 0, offset = 0, myVessel = False, debug = False, csvFile =""):
+def get_request(request_type, sDate=QDate(), eDate=QDate(), lengthG=[], gearG=[], specG=[], locationG=[], limit=0, offset=0, myVessel=False, info_log=False, csvFile ="", appendCSV=False):
     url = base_url + request_type
     header = {'accept': 'application/json'}   
     params = __getParams(request_type, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel)
-    return get_prepared_request(url, header, params, debug, csvFile)
+    return get_prepared_request(url, header, params, info_log, csvFile, appendCSV)
