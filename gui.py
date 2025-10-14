@@ -396,6 +396,7 @@ class MainWindow(QMainWindow):
         data = gui_data.createJsonItem()
         jsonArray.append(data)
         r.createJson(jsonArray, 'jsonTestFile.json')
+        ep.json_to_pandas_csv(jsonArray, "output/csvToreFile.csv")  # filename with directory
          
 
     def supplier_button_clicked(self):
@@ -430,6 +431,8 @@ class MainWindow(QMainWindow):
         jsonArray.append(data)
         r.createJson(jsonArray, 'jsonTestFile.json')
 
+        ep.json_to_pandas_csv(jsonArray, "output/csvToreFile.csv")  # filename with directory
+
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
         # Create item holding input parameters from gui
@@ -452,6 +455,8 @@ class MainWindow(QMainWindow):
         data = gui_data.createJsonItem()
         jsonArray.append(data)
         r.createJson(jsonArray, 'jsonTestFile.json')
+
+        ep.json_to_pandas_csv(jsonArray, "output/csvToreFile.csv")  # filename with directory
 
 
     def kpi05_button_clicked(self):
