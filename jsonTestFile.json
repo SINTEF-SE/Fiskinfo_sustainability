@@ -3,35 +3,49 @@
         "vesselName": "Gadus  Njord",
         "callSign": "",
         "numberOfRefVessels": 131,
-        "group": "TwentyEightAndAbove",
-        "gear": "Trawl",
-        "specie": "All",
+        "group": [
+            "TwentyEightAndAbove"
+        ],
+        "gear": [
+            "Trawl"
+        ],
+        "specie": [
+            "All"
+        ],
         "aggregatedMonths": 3,
         "NumberOfPeriods": 4,
         "dataArray": [
             {
                 "startDate": "31-12-2023",
                 "endDate": "31-03-2024",
-                "FUI": 868.1000168802786,
-                "avFUI": 836.7938004175528
+                "eeoi": 0.41608834695928115,
+                "avEeoi": 0.5055922236641052,
+                "FUI": 868.1000168802785,
+                "avFUI": 844.6313468087059
             },
             {
                 "startDate": "30-03-2024",
                 "endDate": "30-06-2024",
+                "eeoi": 0.35574089800495357,
+                "avEeoi": 0.534924813453808,
                 "FUI": 634.57121565362,
-                "avFUI": 1172.7750576671642
+                "avFUI": 1172.7750576671644
             },
             {
                 "startDate": "30-06-2024",
                 "endDate": "30-09-2024",
+                "eeoi": 0.33417723064859894,
+                "avEeoi": 0.8735913119558439,
                 "FUI": 791.2346982310678,
                 "avFUI": 1231.1913215319885
             },
             {
                 "startDate": "30-09-2024",
                 "endDate": "31-12-2024",
+                "eeoi": 1.1226797796904882,
+                "avEeoi": 0.6820103863146418,
                 "FUI": 1332.7429397708124,
-                "avFUI": 1528.0504874112498
+                "avFUI": 1528.05048741125
             }
         ]
     }

@@ -377,12 +377,25 @@ class MainWindow(QMainWindow):
 
     def bank_button_clicked(self):
         ## get start and stop dates
-        createBankReport(self.stopDateEdit.date(),
-                         self.vesselCombo.checked_items_data(),
-                         self.gearCombo.checked_items_data(),
-                         self.speciesCombo.checked_items_data(),
-                         int(self.aggEdit.text()),
-                         int(self.resEdit.text()))
+        # Create item holding input parameters from gui
+        gui_data = r.Output('Gadus  Njord', 
+                self.vesselCombo.checked_items_data(), 
+                self.gearCombo.checked_items_data(), 
+                self.speciesCombo.checked_items_data(),
+                splitCatchLocation(self.locationText.toPlainText()), 
+                int(self.aggEdit.text()), 
+                int(self.resEdit.text()))
+        
+        # Calculate dates for all periodes, and all kpi's required
+        getDatesArray(self.stopDateEdit.date(), gui_data)             
+        kpi_01(gui_data)
+        kpi_02(gui_data)
+
+        # create json fiole
+        jsonArray = []
+        data = gui_data.createJsonItem()
+        jsonArray.append(data)
+        r.createJson(jsonArray, 'jsonTestFile.json')
          
 
     def supplier_button_clicked(self):
@@ -396,56 +409,47 @@ class MainWindow(QMainWindow):
         
     def kpi01_button_clicked(self):
         # Produce graphics and output for EEOI
-        dateArray = getDatesArray(self.stopDateEdit.date(), int(self.aggEdit.text()), int(self.resEdit.text())) # getDatesArray takes only 3 arguments
-        print(dateArray)
-        kpi01Array, nVessels = kpi_01(self.vesselCombo.checked_items_data(),
-               self.gearCombo.checked_items_data(),
-               self.speciesCombo.checked_items_data(),
-               splitCatchLocation(self.locationText.toPlainText()),
-               dateArray)
-        
-        item = r.Output('Gadus  Njord', 
-                nVessels, 
-                self.vesselCombo.currentText(), 
-                self.gearCombo.currentText(), 
-                self.speciesCombo.currentText(), 
+        # Create item holding input parameters from gui
+        gui_data = r.Output('Gadus  Njord', 
+                self.vesselCombo.checked_items_data(), 
+                self.gearCombo.checked_items_data(), 
+                self.speciesCombo.checked_items_data(),
+                splitCatchLocation(self.locationText.toPlainText()), 
                 int(self.aggEdit.text()), 
-                int(self.resEdit.text()),
-                dateArray, 
-                kpi01Array)    
+                int(self.resEdit.text()))
         
+        # Calculate dates for all periodes 
+        getDatesArray(self.stopDateEdit.date(), gui_data) 
+        
+        # Calculate KPI-01
+        kpi_01(gui_data)   
+        
+        # Create JSON file for these data
         jsonArray = []
-        data = item.createJsonItem()
+        data = gui_data.createJsonItem()
         jsonArray.append(data)
         r.createJson(jsonArray, 'jsonTestFile.json')
 
     def kpi02_button_clicked(self):
         # Produce graphics and output for FUI
-        dateArray = getDatesArray(self.stopDateEdit.date(),
-               int(self.aggEdit.text()), int(self.resEdit.text()))
-        kpi02Array, nVessels = kpi_02(self.vesselCombo.checked_items_data(), 
-               
-               self.gearCombo.checked_items_data(), 
-               
-               self.speciesCombo.checked_items_data(), 
-               
-               splitCatchLocation(self.locationText.toPlainText()),
-               
-                dateArray)
-        
-        item = r.Output('Gadus  Njord', 
-                nVessels, 
-                self.vesselCombo.currentText(), 
-                self.gearCombo.currentText(), 
-                self.speciesCombo.currentText(), 
+        # Create item holding input parameters from gui
+        gui_data = r.Output('Gadus  Njord', 
+                self.vesselCombo.checked_items_data(), 
+                self.gearCombo.checked_items_data(), 
+                self.speciesCombo.checked_items_data(),
+                splitCatchLocation(self.locationText.toPlainText()), 
                 int(self.aggEdit.text()), 
-               
-               int(self.resEdit.text()), 
-                dateArray,
-                kpi02Array)    
+                int(self.resEdit.text()))
         
+        # Calculate dates for all periodes 
+        getDatesArray(self.stopDateEdit.date(), gui_data) 
+
+        # Calculate KPI-02
+        kpi_02(gui_data) 
+        
+        # create json file
         jsonArray = []
-        data = item.createJsonItem()
+        data = gui_data.createJsonItem()
         jsonArray.append(data)
         r.createJson(jsonArray, 'jsonTestFile.json')
 

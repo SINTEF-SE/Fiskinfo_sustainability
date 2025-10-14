@@ -4,41 +4,42 @@ from collections import Counter
 import reports as r
 from PySide6.QtCore import QDate, QDateTime
 
-def kpi_01(lengthG, gearG, specG, locG, dateArray):
+
+def kpi_01(gd):
     # Get Norwegian name of length group
     norskLgroup = "["
-    if len(lengthG) == 0:
+    if len(gd.lengthG) == 0:
         norskLgroup += "Alle"
     else:
-        for lg in lengthG: norskLgroup += nlg(lg) + ","
-    norskLgroup += "]"
-
+        for lg in gd.lengthG: norskLgroup += nlg(lg) + ","
+    norskLgroup += "]" 
+    
     #Calculate list of end dates for all periods
     #dList = sliWin(eDate, span, periods)
 
     # get eeio for all sliding windows
-    retArray = []
     myEeoiArray = ['eeoi']
     avEeoiArray = ['avEeoi']
-    startDateList = dateArray[0]
-    endDateList = dateArray[1]
+    startDateList = gd.datesArray[0]
+    endDateList = gd.datesArray[1]
     m = 0
     for sDate in startDateList:     
-        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, myVessel = True)
+        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = gd.lengthG, gearG = gd.gearG, specG = gd.specG, locationG = gd.locG, myVessel = True)
         myEeoiArray.append(eeoi)
-        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, locationG = locG, myVessel = False)
+        eeoi = 1000*ep.get_request(ep.av_eeoi, sDate, endDateList[m], lengthG = gd.lengthG, gearG = gd.gearG, specG= gd.specG, locationG = gd.locG, myVessel = False)
         avEeoiArray.append(eeoi)
         m += 1
+
     entries = len(endDateList)
-    retArray.append(myEeoiArray)
-    retArray.append(avEeoiArray)
+    gd.dataArray.append(myEeoiArray)
+    gd.dataArray.append(avEeoiArray)
        
     # Find total number of vessels in in group
-    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG, locG)
+    gd.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gd.lengthG, gd.gearG, gd.specG, gd.locG)
     
     print("myEeoi array: ", myEeoiArray)
     print("AvEeoi array: ", avEeoiArray)
-    print ("Antall båter. ", nVessels)
+    print ("Antall båter. ", gd.nVessels)
 
     '''jsonArray = []
     csvArray = []
@@ -63,46 +64,42 @@ def kpi_01(lengthG, gearG, specG, locG, dateArray):
     title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
     plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")'''
 
-    return retArray, nVessels
 
-def kpi_02(lengthG, gearG, specG, locG, dateArray):
+def kpi_02(gd):
     # Get Norwegian name of lenght group
     norskLgroup = "["
-    if len(lengthG) == 0:
+    if len(gd.lengthG) == 0:
         norskLgroup += "Alle"
     else:
-        for lg in lengthG: norskLgroup += nlg(lg) + ","
-    norskLgroup += "]"
+        for lg in gd.lengthG: norskLgroup += nlg(lg) + ","
+    norskLgroup += "]" 
 
     #Calculate list of end dates for all periods
     #dList = sliWin(eDate, span, periods)
 
     # get fui for all sliding windows
-    retArray = []
     myFuiArray = ['FUI']
     avFuiArray = ['avFUI']
-    startDateList = dateArray[0]
-    endDateList = dateArray[1]
+    startDateList = gd.datesArray[0]
+    endDateList = gd.datesArray[1]
     m = 0
     for sDate in startDateList:     
-        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG = specG, locationG = locG, myVessel = True)
+        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = gd.lengthG, gearG = gd.gearG, specG = gd.specG, locationG = gd.locG, myVessel = True)
         myFuiArray.append(fui)
-        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = lengthG, gearG = gearG, specG= specG, locationG = locG, myVessel = False)
+        fui = 1000*ep.get_request(ep.av_fui, sDate, endDateList[m], lengthG = gd.lengthG, gearG = gd.gearG, specG= gd.specG, locationG = gd.locG, myVessel = False)
         avFuiArray.append(fui)
         m += 1
 
     entries = len(endDateList)
-    retArray.append(myFuiArray)
-    retArray.append(avFuiArray)
+    gd.dataArray.append(myFuiArray)
+    gd.dataArray.append(avFuiArray)
 
     # Find total number of vessels in in group
-    nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], lengthG, gearG, specG, locG)
+    gd.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gd.lengthG, gd.gearG, gd.specG, gd.locG)
     
     print("myFui array: ", myFuiArray)
     print("AvFui array: ", avFuiArray)
-    print ("Antall båter. ", nVessels)
-
-    return retArray, nVessels
+    print ("Antall båter. ", gd.nVessels)
 
     # create title for plot
     # title = "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}, Art: {sGroup}, Fangstfelt:{cArea}".format(months=span, vGroup=norskLgroup, gGroup=emptyArrToAllAlle(gearG), sGroup=emptyArrToAllAlle(specG), cArea=emptyArrToAllAlle(locG))

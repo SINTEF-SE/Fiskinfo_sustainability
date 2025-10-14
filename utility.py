@@ -35,21 +35,21 @@ def getMonthTimestamps(start_qdate, end_qdate):
     return timestamps
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
-def getDatesArray(eDate, span, periods):
+def getDatesArray(eDate, gd):
         endDateArray = []   # holds the end dates for all requests
         startDateArray = [] # holds the start dates for all requests
         dateArray = []
 
-        for m in reversed(range(0,periods)):
-                endDateArray.append(eDate.addMonths(-m*span))
+        for m in reversed(range(0,gd.noPeriods)):
+                endDateArray.append(eDate.addMonths(-m*gd.span))
 
         for d in endDateArray:
-                startDateArray.append(d.addMonths(-span))   
+                startDateArray.append(d.addMonths(-gd.span))   
 
         dateArray.append(startDateArray)
         dateArray.append(endDateArray)  
 
-        return dateArray
+        gd.datesArray = dateArray
 
 
 def monthsBetweenQdates(start_date, end_date) -> int:

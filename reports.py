@@ -8,28 +8,28 @@ from typing import Dict, Any
 import os
 
 class Output():
-    def __init__(self, vesselId, noRefVessels, group, gear, specie, span, periods, datesArray, dataArray):
+    def __init__(self, vesselId, group, gear, specie, location, span, periods):
         
         super().__init__()
 
         self.vesselId = vesselId
-        self.noVessels = noRefVessels
-        self.group = group
-        self.gear = gear
-        self.specie = specie
+        self.lengthG = group
+        self.gearG = gear
+        self.specG = specie
+        self.locG = location
         self.span = span
         self.noPeriods = periods
-        self.datesArray = datesArray
-        self.dataArray = dataArray
+        self.dataArray = []     #create emty arry to be filled in by kpi measurements
+                
 
     def createJsonItem(self):
         data = {}
         data['vesselName'] =self.vesselId
         data['callSign'] = ""
-        data['numberOfRefVessels'] = self.noVessels
-        data['group'] = self.group
-        data['gear'] = self.gear
-        data['specie'] = self.specie
+        data['numberOfRefVessels'] = self.nVessels
+        data['group'] = self.lengthG
+        data['gear'] = self.gearG
+        data['specie'] = self.specG
         data['aggregatedMonths'] = self.span
         data['NumberOfPeriods'] = self.noPeriods
 
@@ -162,26 +162,7 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
         print("end")
 
     
-def createBankReport(eDate, lengthG, gearG, specG, locG, span, periods):
-    expArray = []
-    dateArray = getDatesArray(eDate, span, periods)
-    for array in dateArray:
-        expArray.append(array)
 
-    eeoiArray = kpi_01(lengthG, gearG, specG, locG, dateArray)
-    for array in eeoiArray:
-        expArray.append(array)
-
-    fuiArray = kpi_02(lengthG, gearG, specG, locG, dateArray)
-    for array in fuiArray:
-        expArray.append(array)
-        
-    item = Output('EEOI', 'Gadus  Njord', 1, "", 3, 4, expArray)
-    print (expArray)
-    #data = item.createJsonItem()
-    csvArray = []
-    item.createCsvHeading(csvArray)
-    item.createCsvItem(csvArray)
-    r.createCsv(csvArray, 'csvtestFile.csv')
+    
     
     
