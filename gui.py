@@ -445,20 +445,7 @@ class MainWindow(QMainWindow):
         print ("Antall båter. ", gui_data.nVessels)
         
         # create plot
-        # Get Norwegian name of length group
-        norskLgroup = "["
-        if len(gui_data.lengthG) == 0:
-            norskLgroup += "Alle"
-        else:
-            for lg in gui_data.lengthG: norskLgroup += nlg(lg) + ","
-        norskLgroup += "]" 
-
-        myEeoiArray = gui_data.dataArray[0]
-        avEeoiArray = gui_data.dataArray[1]
-
-        span = monthsBetweenQdates(startDateList[0], endDateList[0])
-        title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gui_data.gearG)
-        plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = gui_data.nVessels))
+        r.createPlot(gui_data, 'KPI-01: EEOI [g CO2 /(fangst*nm)]')
 
         # Create JSON and CSV files for these data        
         if (toCsvFile != ""):
@@ -494,6 +481,9 @@ class MainWindow(QMainWindow):
         gui_data.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
         print ("Antall båter. ", gui_data.nVessels)
         
+        # create plot
+        r.createPlot(gui_data, 'KPI-02: FUI [g CO2 /fangst]')
+
         # create json file
         jsonArray = []
         data = gui_data.createJsonItem()
@@ -528,6 +518,9 @@ class MainWindow(QMainWindow):
         gui_data.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
         print ("Antall båter. ", gui_data.nVessels)
         
+        # create plot
+        r.createPlot(gui_data, 'KPI-05:')
+
         # create json file
         jsonArray = []
         data = gui_data.createJsonItem()

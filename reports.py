@@ -75,8 +75,27 @@ class Output():
         csvArray.append(header2)
 
 
-   
+def createPlot(gd, title):
+    # create plot
+    # Get Norwegian name of length group
+    norskLgroup = "["
+    if len(gd.lengthG) == 0:
+        norskLgroup += "Alle"
+    else:
+        for lg in gd.lengthG: norskLgroup += nlg(lg) + ","
+    norskLgroup += "]" 
 
+    startDateList = gd.datesArray[0]
+    endDateList = gd.datesArray[1]
+    
+    span = monthsBetweenQdates(startDateList[0], endDateList[0])
+    title += " aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
+    r = range(0, len(gd.dataArray), 2)
+    for i in r:
+        print (i)
+        plot(endDateList, gd.dataArray[0+i], gd.dataArray[1+i], title, "{antall} båter i referansegruppen".format(antall = gd.nVessels))
+
+ 
 def jsonToCsv(json_data, csv_file):
     
     print(json_data)

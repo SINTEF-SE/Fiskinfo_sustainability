@@ -18,8 +18,8 @@ def kpi_01(gd):
     #dList = sliWin(eDate, span, periods)
 
     # get eeio for all sliding windows
-    myEeoiArray = ['eeoi']
-    avEeoiArray = ['avEeoi']
+    myEeoiArray = ['EEOI']
+    avEeoiArray = ['avEEOI']
     startDateList = gd.datesArray[0]
     endDateList = gd.datesArray[1]
     m = 0
@@ -81,9 +81,9 @@ def kpi_02(gd):
 def kpi_05(gd):
     # get values for all sliding windows
     myCatchArray = ['Catch']
-    myCatchValueArray = ['CatchValue']
+    myCatchValueArray = ['Catch Value']
     avCatchArray = ['avCatch']
-    avCatchValueArray = ['avCatchValue']
+    avCatchValueArray = ['avCatch Value']
     startDateList = gd.datesArray[0]
     endDateList = gd.datesArray[1]
     m = 0
@@ -101,8 +101,8 @@ def kpi_05(gd):
         m += 1
         
     gd.dataArray.append(myCatchArray)
-    gd.dataArray.append(myCatchValueArray)
     gd.dataArray.append(avCatchArray)
+    gd.dataArray.append(myCatchValueArray)
     gd.dataArray.append(avCatchValueArray)
     
     print("myCatch array: ", myCatchArray)
