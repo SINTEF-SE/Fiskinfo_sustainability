@@ -30,39 +30,16 @@ def kpi_01(gd):
         avEeoiArray.append(eeoi)
         m += 1
 
-    entries = len(endDateList)
     gd.dataArray.append(myEeoiArray)
     gd.dataArray.append(avEeoiArray)
-       
-    # Find total number of vessels in in group
-    gd.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gd.lengthG, gd.gearG, gd.specG, gd.locG)
     
     print("myEeoi array: ", myEeoiArray)
     print("AvEeoi array: ", avEeoiArray)
-    print ("Antall båter. ", gd.nVessels)
 
-    '''jsonArray = []
-    csvArray = []
-    item = r.Output('EEOI', 'Gadus  Njord', 1, "", 3, 4, myEeoiArray)
-    data = item.createJsonItem()
-    jsonArray.append(data)
-    #item.createCsvHeading(csvArray)
-    #item.createCsvItem(csvArray)
-    #r.createCsv(csvArray, 'csvtestFile.csv')
-
-    item = r.Output('EEOI', 'Reference Fleet', nVessels, "", 3, 4, avEeoiArray)
-    data = item.createJsonItem()
-    jsonArray.append(data)
-
-    json_data = r.createJson(jsonArray, 'jsonTestFile.json')
-    toCsvFile = "output/kpi_01.csv" 
-    r.json_to_pandas_csv(jsonArray, toCsvFile)  
-   # r.jsonToCsv(json_data, 'testCSVfil.csv')
-    
     # create title for plot
-    span = monthsBetweenQdates(startDateList[0], endDateList[0])
-    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gearG)
-    plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "EEOI")'''
+    '''span = monthsBetweenQdates(startDateList[0], endDateList[0])
+    title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
+    plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), "EEOI")'''
 
 
 def kpi_02(gd):
@@ -90,57 +67,50 @@ def kpi_02(gd):
         avFuiArray.append(fui)
         m += 1
 
-    entries = len(endDateList)
     gd.dataArray.append(myFuiArray)
     gd.dataArray.append(avFuiArray)
 
-    # Find total number of vessels in in group
-    gd.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gd.lengthG, gd.gearG, gd.specG, gd.locG)
-    
     print("myFui array: ", myFuiArray)
     print("AvFui array: ", avFuiArray)
-    print ("Antall båter. ", gd.nVessels)
 
     # create title for plot
     # title = "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}, Art: {sGroup}, Fangstfelt:{cArea}".format(months=span, vGroup=norskLgroup, gGroup=emptyArrToAllAlle(gearG), sGroup=emptyArrToAllAlle(specG), cArea=emptyArrToAllAlle(locG))
     # plot(dList, myFuiArray,avFuiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "FUI")
 
 
-'''def kpi_05(eDate, lengthG, gearG, specG, span, periods):
-
-    #Calculate list of end dates for all periods
-    dList = sliWin(eDate, span, periods)
-
+def kpi_05(gd):
     # get values for all sliding windows
-    myCatchArray = []
-    myCatchValueArray = []
-    avCatchArray = []
-    avCatchValueArray = []
-    for mDate in dList:      
-        dict = ep.get_request(ep.average, mDate.addMonths(-span), mDate, lengthG = lengthG, gearG = gearG, myVessel = True)
+    myCatchArray = ['Catch']
+    myCatchValueArray = ['CatchValue']
+    avCatchArray = ['avCatch']
+    avCatchValueArray = ['avCatchValue']
+    startDateList = gd.datesArray[0]
+    endDateList = gd.datesArray[1]
+    m = 0
+    for sDate in startDateList:      
+        dict = ep.get_request(ep.average, sDate, endDateList[m], lengthG = gd.lengthG, gearG = gd.gearG, specG = gd.specG, locationG = gd.locG, myVessel = True)
         catchWeight = dict['weightPerFuel'] * dict['fuelConsumption'] /1000
         myCatchArray.append(catchWeight)
         catchValue = dict['catchValuePerFuel'] * dict['fuelConsumption'] /1000
         myCatchValueArray.append(catchValue)
-        dict = ep.get_request(ep.average, mDate.addMonths(-span), mDate, lengthG = lengthG, gearG = gearG, myVessel = False)
+        dict = ep.get_request(ep.average, sDate, endDateList[m], lengthG = gd.lengthG, gearG = gd.gearG, specG = gd.specG, locationG = gd.locG, myVessel = False)
         catchWeight = dict['weightPerFuel'] * dict['fuelConsumption'] /1000
         avCatchArray.append(catchWeight)
         catchValue = dict['catchValuePerFuel'] * dict['fuelConsumption'] /1000
         avCatchValueArray.append(catchValue)
+        m += 1
         
-    # calculate start date
-    sDate = eDate.addMonths(-span*periods)
-
-    # Find total number of vessels in in group
-    nVessels = getTotalVessels(ep.trips, sDate, eDate, lengthG, gearG, specG = specG)
+    gd.dataArray.append(myCatchArray)
+    gd.dataArray.append(myCatchValueArray)
+    gd.dataArray.append(avCatchArray)
+    gd.dataArray.append(avCatchValueArray)
     
     print("myCatch array: ", myCatchArray)
     print("myCatchValue array: ", myCatchValueArray)
     print("avCatch array: ", avCatchArray)
     print("avCatchValue array: ", avCatchValueArray)
-    print ("Antall båter. ", nVessels)
 
-    # create titles for two plots
+    '''# create titles for two plots
     title1 = "KPI-05: Total fangst i 1000 tonn over {months} måneder".format(months = span)
     title2 = "KPI-05: Total fangstverdi i kNOK over {months} måneder".format(months = span)
     plot(dList, myCatchArray,avCatchArray, title1, "{antall} båter i referansegruppen".format(antall = nVessels), "1000 Tonn")
