@@ -63,6 +63,9 @@ av_fui = 'v1.0/trip/benchmarks/average_fui'
 ## HAUL
 haul = 'v1.0/hauls'
 
+## PRICE
+price = 'https://data.ssb.no/api/pxwebapi/v2/tables/09654/data?lang=no&valueCodes[PetroleumProd]=035&valueCodes[ContentsCode]=Priser&valueCodes[Tid]='
+
 # dictionary with responses
 itemDict = json.loads('[]')
 
@@ -96,10 +99,14 @@ def __logRequests(time = "", url= "", header = "", params = "", response = None,
 # set the parameters for the query
 def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel = False):
     params = {}
-    if gearG[0] == "All": gearG = [] #allGearGroups
-    if lengthG[0] == "All": lengthG = [] # allVesselGroups
-    if specG[0] == "All": specG = [] #allSpeciesGroups
-    if locationG[0] == "All": locationG = []
+    if gearG != []:
+        if gearG[0] == "All": gearG = [] #allGearGroups
+    if lengthG != []:
+        if lengthG[0] == "All": lengthG = [] # allVesselGroups
+    if specG != []:
+        if specG[0] == "All": specG = [] #allSpeciesGroups
+    if locationG != []:
+        if locationG[0] == "All": locationG = []
 
     if requestType == haul: # Uses differnt time setting: months[]
         params['months[]'] = getMonthTimestamps(sDate, eDate) # add intermittent months here
@@ -226,3 +233,52 @@ def get_request(request_type, sDate=QDate(), eDate=QDate(), lengthG=[], gearG=[]
     header = {'accept': 'application/json'}   
     params = __getParams(request_type, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel)
     return get_prepared_request(url, header, params, info_log, csvFile, appendCSV)
+
+def get_ssb_request(request_type, startDate, endDate, info_log=False, csvFile ="", appendCSV=False):
+    url = request_type
+    startMonth = QDate.month(startDate)
+    startYear = QDate.year(startDate)
+    endMonth = QDate.month(endDate)
+    endYear = QDate.year(endDate)
+    param = "[range({syear}M{smonth:02d},{eyear}M{emonth:02d})]".format(syear = startYear, smonth = startMonth, eyear = endYear, emonth = endMonth)
+    url += param
+    print (url)
+   # header = {'accept': 'application/json'}   
+   # params = __getParams(request_type, sDate, eDate, lengthG, gearG, specG, locationG, limit, offset, myVessel)
+    try:
+        response = session.get(url)
+        response.raise_for_status()
+        #__logRequests(utc_time, url, header, params, response, log_file="output/api_request_log.tsv")   # log api requests to file
+        if response.status_code >= 400:
+            logging.error(f"AUTHORIZATION REQUIRED!!! Error code:{response.status_code}")
+            return 0
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"HTTP error: {e}")
+        return 0
+    except requests.exceptions.RequestException as err:
+        logging.error(f"Request exception: {err}")
+        return 0
+    
+     # If the response is JSON, parse it
+    try:
+        data = response.json()
+        if data != None and csvFile != "":  # Store json response to CSV file if file name provided
+            json_to_pandas_csv(data, csvFile, append=appendCSV)
+            logging.info(f"JSON data stored to CSV file: {csvFile}")
+
+        if isinstance(data, float):
+            if info_log: logging.info(f"Float data received: {data}")
+            return data
+
+        if data != None:
+            itemDict = json.loads(response.text)
+            if info_log: logging.info(f"#Objects: {len(itemDict)}\nContent (JSON): {json.dumps(data, indent=2)}")
+            return itemDict
+        else:
+            logging.error("No payload data received")
+
+    except requests.exceptions.JSONDecodeError as e:
+        logging.error(f"Response is no valid JSON: {e}")
+        logging.error(f"Content: {response.text}")
+    
+

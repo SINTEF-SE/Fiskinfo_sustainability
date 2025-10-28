@@ -147,6 +147,7 @@ class MainWindow(QMainWindow):
         user_menu = api_menu.addMenu("User")
         trip_menu = api_menu.addMenu("Trip")
         haul_menu = api_menu.addMenu("Haul")
+        price_menu = api_menu.addMenu("Price")
 
         #### Add button actions to API menu ##############
         # Gear
@@ -209,6 +210,11 @@ class MainWindow(QMainWindow):
         getHaul_action = QAction(QIcon("AppIcons/user.png"), "&Get Hauls", self)
         getHaul_action.triggered.connect(self.getHaul_button_clicked)
         haul_menu.addAction(getHaul_action)
+
+        # Price
+        getPrice_action = QAction(QIcon("AppIcons/user.png"), "&Get Price", self)
+        getPrice_action.triggered.connect(self.getPrice_button_clicked)
+        price_menu.addAction(getPrice_action)
 
         #### Add button actions to KPI menu ###############
         # Action for KPI-01, EEOI calculations
@@ -363,6 +369,17 @@ class MainWindow(QMainWindow):
                        csvFile=toCsvFile,
                        appendCSV=self.appendCsv.isChecked())
 
+    def getPrice_button_clicked(self):
+        toCsvFile = "output/price.csv" if self.storeCsv.isChecked() else ""
+        itemDict = ep.get_ssb_request(ep.price, 
+                        self.startDateEdit.date(),
+                        self.stopDateEdit.date(),
+                        info_log=self.infoOutput.isChecked(), 
+                        csvFile=toCsvFile, 
+                        appendCSV=self.appendCsv.isChecked())
+        
+        print(itemDict['value'])
+    
     def auth_button_clicked(self):
         # Not implemented
         ep.get_access_token()
