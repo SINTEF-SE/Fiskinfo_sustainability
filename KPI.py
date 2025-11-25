@@ -5,6 +5,8 @@ import reports as r
 from PySide6.QtCore import QDate, QDateTime
 
 
+PRICE_DIFF = 5          # approximate price difference between autodiesel and marine gas oil (MGO) in NOK
+
 def kpi_01(gd):
     # Get Norwegian name of length group
     norskLgroup = "["
@@ -19,7 +21,7 @@ def kpi_01(gd):
 
     # get eeio for all sliding windows
     myEeoiArray = ['EEOI']
-    avEeoiArray = ['avEEOI']
+    avEeoiArray = ['Gj.snitt EEOI']
     startDateList = gd.datesArray[0]
     endDateList = gd.datesArray[1]
     m = 0
@@ -56,7 +58,7 @@ def kpi_02(gd):
 
     # get fui for all sliding windows
     myFuiArray = ['FUI']
-    avFuiArray = ['avFUI']
+    avFuiArray = ['Gj.snitt FUI']
     startDateList = gd.datesArray[0]
     endDateList = gd.datesArray[1]
     m = 0
@@ -78,12 +80,47 @@ def kpi_02(gd):
     # plot(dList, myFuiArray,avFuiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "FUI")
 
 
+def kpi_03_04(gd):
+    # get values for all sliding windows
+    myRevPerTonWeightArray = ['Netto fortjeneste per tonn fisk']
+    avRevPerTonWeightArray = ['Gj.snitt Netto fortjeneste per tonn fisk']
+    myRevPerHourArray = ['Netto fortjeneste per time']
+    avRevPerHourArray = ['Gj.snitt Netto fortjeneste per time']
+    startDateList = gd.datesArray[0]
+    endDateList = gd.datesArray[1]
+    m = 0
+    for sDate in startDateList:   
+        dict = ep.get_ssb_request(ep.price, sDate, sDate, info_log=False, csvFile ="", appendCSV=False)
+        priceArray = dict['value']  
+        price = priceArray[0] - PRICE_DIFF       # subract NOK 5 from diesel price
+        dict = ep.get_request(ep.average, sDate, endDateList[m], lengthG = gd.lengthG, gearG = gd.gearG, specG = gd.specG, locationG = gd.locG, myVessel = True)
+        catchValPerFuel = dict['catchValuePerFuel'] 
+        weightPerFuel = dict['weightPerFuel']
+        weightPerHour = dict['weightPerHour']
+        myRevPerTonWeightArray.append((catchValPerFuel - price)/(weightPerFuel)*1000)
+        myRevPerHourArray.append((catchValPerFuel - price)*weightPerFuel/weightPerHour)
+        dict = ep.get_request(ep.average, sDate, endDateList[m], lengthG = gd.lengthG, gearG = gd.gearG, specG = gd.specG, locationG = gd.locG, myVessel = False)
+        avCatchValPerFuel = dict['catchValuePerFuel'] 
+        avWeightPerFuel = dict['weightPerFuel']
+        avWeightPerHour = dict['weightPerHour']
+        avRevPerTonWeightArray.append((avCatchValPerFuel - price)/(avWeightPerFuel)*1000)
+        avRevPerHourArray.append((avCatchValPerFuel - price)*avWeightPerFuel/avWeightPerHour)
+        m += 1
+        
+    gd.dataArray.append(myRevPerTonWeightArray)
+    gd.dataArray.append(avRevPerTonWeightArray)
+    gd.dataArray.append(myRevPerHourArray)
+    gd.dataArray.append(avRevPerHourArray)
+        
+     
+
+
 def kpi_05(gd):
     # get values for all sliding windows
-    myCatchArray = ['Catch']
-    myCatchValueArray = ['Catch Value']
-    avCatchArray = ['avCatch']
-    avCatchValueArray = ['avCatch Value']
+    myCatchArray = ['Fangst i tonn']
+    myCatchValueArray = ['Fangstverdi']
+    avCatchArray = ['Gj.snitt fangst i tonn']
+    avCatchValueArray = ['Gj.snitt fangstverdi']
     startDateList = gd.datesArray[0]
     endDateList = gd.datesArray[1]
     m = 0

@@ -16,8 +16,10 @@ base_url = 'https://api.dev.datafangst.orcalabs.no/'
 
 #### input data to request parameters ####################
 ## My boat
-fiskdirId = 2013063493  # Gadus Njord
+#fiskdirId = 2013063493  # Gadus Njord
 fiskdirIdGroup = [2013063493, 1999001513, 2011054408, 2018101213, 2000013339]    # Nordland Havfiske
+fiskdirId = 2020115659  #Hermes
+
 
 # Vessel group
 allVesselGroups = ["Unknown", "UnderEleven", "ElevenToFifteen", "FifteenToTwentyOne", "TwentyTwoToTwentyEight", "TwentyEightAndAbove"]

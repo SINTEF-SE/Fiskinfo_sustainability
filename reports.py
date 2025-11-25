@@ -20,6 +20,7 @@ class Output():
         self.span = span
         self.noPeriods = periods
         self.dataArray = []     #create emty arry to be filled in by kpi measurements
+        self.nVessels = 0
                 
 
     def createJsonItem(self):

@@ -10,6 +10,8 @@ class MainWindow(QMainWindow):
         
         super().__init__()
        
+        self.inputHasChanged = True
+        self.nVessels = 0
         ## Main window
         self.actionText =""
         self.getParams = ""
@@ -49,6 +51,7 @@ class MainWindow(QMainWindow):
         self.startDateEdit = QDateEdit(QDate(2024,1,1))
         self.startDateEdit.setStyleSheet("QDateEdit { background-color: lightblue; color: black; }")
         layout.addWidget(self.startDateEdit, 0, 1)
+        self.startDateEdit.dateChanged.connect(self.inputChanged)
 
         ## Add stopdate field
         stopDateLabel = QLabel("Stopp dato:")
@@ -56,6 +59,7 @@ class MainWindow(QMainWindow):
         self.stopDateEdit = QDateEdit(QDate(2024,12,31))
         self.stopDateEdit.setStyleSheet("QDateEdit { background-color: lightblue; color: black; }")
         layout.addWidget(self.stopDateEdit, 0, 3)
+        self.stopDateEdit.dateChanged.connect(self.inputChanged)
 
         ## Add vessel group dropdown box
         vesselLabel = QLabel("Lengdegruppe:")
@@ -69,6 +73,7 @@ class MainWindow(QMainWindow):
         allGearGroups = ["Unknown", "Seine", "Net", "HookGear", "LobsterTrapAndFykeNets", "Trawl", "DanishSeine",
                          "HarpoonCannon", "OtherGear", "FishFarming"]
         layout.addWidget(self.vesselCombo, 1, 1)
+        self.vesselCombo.currentTextChanged.connect(self.inputChanged)
 
         ## Add gear group field dropdown box
         gearLabel = QLabel("Redskapsgruppe:")
@@ -78,6 +83,7 @@ class MainWindow(QMainWindow):
         self.gearCombo.add_item("All", checked = False)
         self.gearCombo.add_items(ep.allGearGroups,[False,False,False,False,False,True,False,False,False,False])
         layout.addWidget(self.gearCombo, 2, 1)
+        self.gearCombo.currentTextChanged.connect(self.inputChanged)
 
         ## Add species group dropdown box
         speciesLabel = QLabel("Artsgruppe:")
@@ -87,6 +93,7 @@ class MainWindow(QMainWindow):
         self.speciesCombo.add_item("All", checked = True)
         self.speciesCombo.add_items(ep.allSpeciesGroups)
         layout.addWidget(self.speciesCombo, 3, 1)
+        self.speciesCombo.currentTextChanged.connect(self.inputChanged)
 
         ## Add catch locations array
         locationLabel = QLabel("Fangstfelt:")
@@ -94,6 +101,7 @@ class MainWindow(QMainWindow):
         self.locationText = QTextEdit("All")
         self.locationText.setStyleSheet("QTextEdit { background-color: lightblue; color: black; }")
         layout.addWidget(self.locationText, 3, 3)
+        self.locationText.textChanged.connect(self.inputChanged)
 
         ## Add a my boat checkbox (to run query on my boat only foor those endpoints that support this)
         self.myVessel = QCheckBox("Mitt fartøy", self)
@@ -118,6 +126,7 @@ class MainWindow(QMainWindow):
         self.aggEdit.setStyleSheet("QLineEdit { background-color: lightblue; color: black; }")
         self.aggEdit.setText(str('3'))
         layout.addWidget(self.aggEdit, 1, 3)
+        self.aggEdit.textChanged.connect(self.inputChanged)
 
         ## Add field for number of periods calculated (for KPI calculations)
         resLabel = QLabel("Antall perioder bakover \ni tid fra sluttdato:")
@@ -126,6 +135,7 @@ class MainWindow(QMainWindow):
         self.resEdit.setStyleSheet("QLineEdit { background-color: lightblue; color: black; }")
         self.resEdit.setText(str('4'))
         layout.addWidget(self.resEdit, 2, 3)
+        self.resEdit.textChanged.connect(self.inputChanged)
                
         ## Create toolbar
         toolbar = QToolBar("My main toolbar")
@@ -227,6 +237,11 @@ class MainWindow(QMainWindow):
         kpi_02_action.triggered.connect(self.kpi02_button_clicked)
         kpi_menu.addAction(kpi_02_action)
 
+        # Action for KPI-03 Netto fortjeneste per tonn
+        kpi_03_04_action = QAction(QIcon("AppIcons/cross-circle-frame.png"), "&KPI_03/04 Netto fortjeneste", self)
+        kpi_03_04_action.triggered.connect(self.kpi03_04_button_clicked)
+        kpi_menu.addAction(kpi_03_04_action)
+
         # Action for KPI-05 Fangst og fangstverdi per år
         kpi_05_action = QAction(QIcon("AppIcons/cross-circle-frame.png"), "&KPI_05", self)
         kpi_05_action.triggered.connect(self.kpi05_button_clicked)
@@ -261,6 +276,15 @@ class MainWindow(QMainWindow):
         pef_menu.addAction(pef_action)
       
     ###########  Define button-clicked actions ################
+
+    def inputChanged(self):
+        self.inputHasChanged = True
+
+    def setInputChanged(self, state):
+        self.inputHasChanged = state
+
+    def isInputChanged(self):
+        return self.inputHasChanged
     
     def getGear_button_clicked(self):
         toCsvFile = "output/gear.csv" if self.storeCsv.isChecked() else ""
@@ -411,12 +435,15 @@ class MainWindow(QMainWindow):
         kpi_05(gui_data)
 
          # Find total number of vessels in in group
-        startDateList = gui_data.datesArray[0]
-        endDateList = gui_data.datesArray[1]
-        entries = len(endDateList)
-        gui_data.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
-        print ("Antall båter. ", gui_data.nVessels)
+        if (self.isInputChanged()):
+            startDateList = gui_data.datesArray[0]
+            endDateList = gui_data.datesArray[1]
+            entries = len(endDateList)
+            self.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
+            self.setInputChanged(False)
+            print ("Antall båter. ", self.nVessels)
 
+        gui_data.nVessels = self.nVessels
         # create json fiole
         jsonArray = []
         data = gui_data.createJsonItem()
@@ -455,12 +482,15 @@ class MainWindow(QMainWindow):
         kpi_01(gui_data)  
 
         # Find total number of vessels in in group
-        startDateList = gui_data.datesArray[0]
-        endDateList = gui_data.datesArray[1]
-        entries = len(endDateList)
-        gui_data.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
-        print ("Antall båter. ", gui_data.nVessels)
+        if (self.isInputChanged()):
+            startDateList = gui_data.datesArray[0]
+            endDateList = gui_data.datesArray[1]
+            entries = len(endDateList)
+            self.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
+            self.setInputChanged(False)
+            print ("Antall båter. ", self.nVessels)
         
+        gui_data.nVessels = self.nVessels
         # create plot
         r.createPlot(gui_data, 'KPI-01: EEOI [g CO2 /(fangst*nm)]')
 
@@ -492,12 +522,15 @@ class MainWindow(QMainWindow):
         kpi_02(gui_data) 
 
         # Find total number of vessels in in group
-        startDateList = gui_data.datesArray[0]
-        endDateList = gui_data.datesArray[1]
-        entries = len(endDateList)
-        gui_data.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
-        print ("Antall båter. ", gui_data.nVessels)
+        if (self.isInputChanged()):
+            startDateList = gui_data.datesArray[0]
+            endDateList = gui_data.datesArray[1]
+            entries = len(endDateList)
+            self.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
+            self.setInputChanged(False)
+            print ("Antall båter. ", self.nVessels)
         
+        gui_data.nVessels = self.nVessels
         # create plot
         r.createPlot(gui_data, 'KPI-02: FUI [g CO2 /fangst]')
 
@@ -510,8 +543,49 @@ class MainWindow(QMainWindow):
         if (toCsvFile != ""):
             ep.json_to_pandas_csv(jsonArray, toCsvFile)  
 
+    def kpi03_04_button_clicked(self):
+        # Produce graphics and output for catch value per ton catch and fuel costs
+        toCsvFile = "output/kpi-03_04-Report.csv" if self.storeCsv.isChecked() else ""
+        # Create item holding input parameters from gui
+        gui_data = r.Output('Gadus  Njord', 
+                self.vesselCombo.checked_items_data(), 
+                self.gearCombo.checked_items_data(), 
+                self.speciesCombo.checked_items_data(),
+                splitCatchLocation(self.locationText.toPlainText()), 
+                int(self.aggEdit.text()), 
+                int(self.resEdit.text()))
+        
+        # Calculate dates for all periodes 
+        getDatesArray(self.stopDateEdit.date(), gui_data) 
+
+        # Calculate KPI-03
+        kpi_03_04(gui_data) 
+
+        # Find total number of vessels in in group
+        if (self.isInputChanged()):
+            startDateList = gui_data.datesArray[0]
+            endDateList = gui_data.datesArray[1]
+            entries = len(endDateList)
+            self.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
+            self.setInputChanged(False)
+            print ("Antall båter. ", self.nVessels)
+        
+        gui_data.nVessels = self.nVessels
+        # create plot
+        r.createPlot(gui_data, 'KPI-03/04 netto fortjeneste:')
+
+        # create json file
+        jsonArray = []
+        data = gui_data.createJsonItem()
+        jsonArray.append(data)
+        r.createJson(jsonArray, 'jsonTestFile.json')
+
+        if (toCsvFile != ""):
+            ep.json_to_pandas_csv(jsonArray, toCsvFile)  
+
+
     def kpi05_button_clicked(self):
-        # Produce graphics and output for FUI
+        # Produce graphics and output for catch and catch value per yesr
         toCsvFile = "output/kpi-05-Report.csv" if self.storeCsv.isChecked() else ""
         # Create item holding input parameters from gui
         gui_data = r.Output('Gadus  Njord', 
@@ -525,16 +599,19 @@ class MainWindow(QMainWindow):
         # Calculate dates for all periodes 
         getDatesArray(self.stopDateEdit.date(), gui_data) 
 
-        # Calculate KPI-02
+        # Calculate KPI-05
         kpi_05(gui_data) 
 
         # Find total number of vessels in in group
-        startDateList = gui_data.datesArray[0]
-        endDateList = gui_data.datesArray[1]
-        entries = len(endDateList)
-        gui_data.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
-        print ("Antall båter. ", gui_data.nVessels)
+        if (self.isInputChanged()):
+            startDateList = gui_data.datesArray[0]
+            endDateList = gui_data.datesArray[1]
+            entries = len(endDateList)
+            self.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
+            self.setInputChanged(False)
+            print ("Antall båter. ", self.nVessels)
         
+        gui_data.nVessels = self.nVessels
         # create plot
         r.createPlot(gui_data, 'KPI-05:')
 
