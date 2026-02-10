@@ -3,10 +3,11 @@
 from PySide6.QtWidgets import QApplication
 import sys
 from gui import MainWindow
-import api_requests as api
 
-app = QApplication(sys.argv)
-w = MainWindow()
-w.show()
-app.exec()
-sys.exit()
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = MainWindow()
+    w.show()
+    sys.exit(app.exec())
+
