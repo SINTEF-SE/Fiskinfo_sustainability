@@ -7,7 +7,7 @@ from PySide6.QtCore import QDate, QDateTime
 
 PRICE_DIFF = 5          # approximate price difference between autodiesel and marine gas oil (MGO) in NOK
 
-def kpi_01(gd):
+def kpi_01(gd, toPngFile):
     # Get Norwegian name of length group
     norskLgroup = "["
     if len(gd.lengthG) == 0:
@@ -39,12 +39,12 @@ def kpi_01(gd):
     print("AvEeoi array: ", avEeoiArray)
 
     # create title for plot
-    '''span = monthsBetweenQdates(startDateList[0], endDateList[0])
+    span = monthsBetweenQdates(startDateList[0], endDateList[0])
     title = "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
-    plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), "EEOI")'''
+    plot(endDateList, myEeoiArray,avEeoiArray, title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), fName = toPngFile)
 
 
-def kpi_02(gd):
+def kpi_02(gd, toPngFile):
     # Get Norwegian name of lenght group
     norskLgroup = "["
     if len(gd.lengthG) == 0:
@@ -76,11 +76,23 @@ def kpi_02(gd):
     print("AvFui array: ", avFuiArray)
 
     # create title for plot
-    # title = "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}, Art: {sGroup}, Fangstfelt:{cArea}".format(months=span, vGroup=norskLgroup, gGroup=emptyArrToAllAlle(gearG), sGroup=emptyArrToAllAlle(specG), cArea=emptyArrToAllAlle(locG))
-    # plot(dList, myFuiArray,avFuiArray, title, "{antall} båter i referansegruppen".format(antall = nVessels), "FUI")
+    span = monthsBetweenQdates(startDateList[0], endDateList[0])
+    title = "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
+    plot(endDateList, myFuiArray,avFuiArray, title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), fName = toPngFile)
 
 
 def kpi_03_04(gd):
+    toPngFile03 = "output/kpi03"
+    toPngFile04 = "output/kpi04"
+
+    # Get Norwegian name of lenght group
+    norskLgroup = "["
+    if len(gd.lengthG) == 0:
+        norskLgroup += "Alle"
+    else:
+        for lg in gd.lengthG: norskLgroup += nlg(lg) + ","
+    norskLgroup += "]" 
+
     # get values for all sliding windows
     myRevPerTonWeightArray = ['Netto fortjeneste per tonn fisk']
     avRevPerTonWeightArray = ['Gj.snitt Netto fortjeneste per tonn fisk']
@@ -112,10 +124,26 @@ def kpi_03_04(gd):
     gd.dataArray.append(myRevPerHourArray)
     gd.dataArray.append(avRevPerHourArray)
         
-     
+    # create title for plot
+    span = monthsBetweenQdates(startDateList[0], endDateList[0])
+    title = "KPI-03: Rev. per Ton [NOK / Tonn] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
+    plot(endDateList, myRevPerTonWeightArray, avRevPerTonWeightArray, title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), fName = toPngFile03)
+
+    title = "KPI-04: Rev. per Hour [NOK / time] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
+    plot(endDateList, myRevPerHourArray, avRevPerHourArray, title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), fName = toPngFile04)
 
 
-def kpi_05(gd):
+def kpi_05(gd, toPngFile):
+    toPngFile05_1 = "output/kpi05_1"
+    
+    # Get Norwegian name of lenght group
+    norskLgroup = "["
+    if len(gd.lengthG) == 0:
+        norskLgroup += "Alle"
+    else:
+        for lg in gd.lengthG: norskLgroup += nlg(lg) + ","
+    norskLgroup += "]" 
+
     # get values for all sliding windows
     myCatchArray = ['Fangst i tonn']
     myCatchValueArray = ['Fangstverdi']
@@ -152,6 +180,13 @@ def kpi_05(gd):
     title2 = "KPI-05: Total fangstverdi i kNOK over {months} måneder".format(months = span)
     plot(dList, myCatchArray,avCatchArray, title1, "{antall} båter i referansegruppen".format(antall = nVessels), "1000 Tonn")
     plot(dList, myCatchValueArray,avCatchValueArray, title2, "{antall} båter i referansegruppen".format(antall = nVessels), "kNOK")'''
+
+    # create title for plot
+    span = monthsBetweenQdates(startDateList[0], endDateList[0])
+    title = "KPI-05: Årlig fangst [Tonn / År] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
+    plot(endDateList, myCatchArray, avCatchArray, title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), fName = toPngFile)
+    title = "KPI-05: Årlig fangstverdi [NOK / År] aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
+    plot(endDateList, myCatchValueArray, avCatchValueArray, title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), fName = toPngFile05_1)
 
 
 ## Utility functions  

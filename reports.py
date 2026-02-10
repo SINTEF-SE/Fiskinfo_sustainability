@@ -6,6 +6,9 @@ from PySide6.QtCore import QDate
 import pandas as pd
 from typing import Dict, Any
 import os
+import logging
+import pdfExt
+
 
 class Output():
     def __init__(self, vesselId, group, gear, specie, location, span, periods):
@@ -76,7 +79,7 @@ class Output():
         csvArray.append(header2)
 
 
-def createPlot(gd, title):
+def createPlot(gd, title, fName = "", show = False):
     # create plot
     # Get Norwegian name of length group
     norskLgroup = "["
@@ -93,8 +96,11 @@ def createPlot(gd, title):
     title += " aggregert over {months} måneder\nLengde: {vGroup}, Redskap: {gGroup}".format(months = span, vGroup = norskLgroup, gGroup = gd.gearG)
     r = range(0, len(gd.dataArray), 2)
     for i in r:
-        print (i)
-        plot(endDateList, gd.dataArray[0+i], gd.dataArray[1+i], title, "{antall} båter i referansegruppen".format(antall = gd.nVessels))
+        newfName = ""
+        if (fName != ""):
+            newfName = fName + f"_{i}.png"
+    
+        plot(endDateList, gd.dataArray[0+i], gd.dataArray[1+i], title, "{antall} båter i referansegruppen".format(antall = gd.nVessels), newfName, show)
 
  
 def jsonToCsv(json_data, csv_file):
@@ -182,7 +188,74 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
         print("end")
 
     
+def getKeys(jsonData):
+   # data = json.loads(jsonData)
+
+    # Get all keys
+    dArr = jsonData['dataArray']
+    jsonData.pop('dataArray')
+    keys1 = jsonData.keys()      #keys linje 1
+    keys2 = dArr[0].keys()   #keys linje 2
+        
+    
+   # print(list(keys)) 
+    return keys1, keys2, dArr
 
     
+def json_to_csv(jsonData, toCsvFile):
+    keys1, keys2, dataArray = getKeys(jsonData)
     
+    try:
+        with open(toCsvFile, "w") as f:
+            for key in keys1:
+                print(key, ',', end='', file = f)
+            print(file=f)
+
+            for key in keys1:
+                val = jsonData[key]       
+                print(val,',', end='', file = f)   
+            print(file=f)
+            print(file=f)
+            
+            for key in keys2:
+                print(key,',', end='', file = f)
+            print(file=f)
+
+            for item in dataArray:
+                for key in keys2:
+                    val = item[key]
+                    print(val,',', end='', file = f)
+                print(file=f)
+        logging.info(f"CSV file saved: {toCsvFile}")
+
+    except Exception as e:
+        logging.error(f"Error writing CSV file: {str(e)}")
+
+
+ #----------------------- PDF Report-------------------------------------------------------
+
+def createPdfDoc(filename, plotFileName):
+    pdf = pdfExt.PDF() 
+    #filename = 'tuto2.pdf'
+    '''fExt = fName.rsplit('.')
+    pdfName = fName.replace(fExt[1], 'pdf')
+    filename = testDir + "/" + pdfName        #Test result PDF name'''
+
+    #y_pos = pdf.printImage2('org.png', 'box.png')  
+    y_pos = pdf.printImage(plotFileName)  
+    #pdf.set_y(y_pos)
+
+    #pdf.printHeadLine('Nummer', 'Dekning %', 'Type', 'Beskrivelse', 'Plasttype', 'Forurensning') 
+
+    '''for m in classified_masks:
+        #if method == "SAM":
+        areaString = f'{(m["area"] / size * 100):.1f}'
+        #else:
+        #  areaString = 'Null'
     
+        Plastic = 'PE'
+        pdf.printObjectLine(str(m['id']), areaString, m['class'], m['description'], Plastic, str(m['pollution']), m['color'])'''
+
+    pdf.output(filename)
+
+    # -------------------------------------------------

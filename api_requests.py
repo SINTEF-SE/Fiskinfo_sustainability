@@ -17,7 +17,8 @@ base_url = 'https://api.dev.datafangst.orcalabs.no/'
 #### input data to request parameters ####################
 ## My boat
 #fiskdirId = 2013063493  # Gadus Njord
-fiskdirIdGroup = [2013063493, 1999001513, 2011054408, 2018101213, 2000013339]    # Nordland Havfiske
+#fiskdirIdGroup = [2013063493, 1999001513, 2011054408, 2018101213, 2000013339]    # Nordland Havfiske
+fiskdirIdGroup = []
 fiskdirId = 2020115659  #Hermes
 
 
@@ -113,21 +114,21 @@ def __getParams(requestType, sDate, eDate, lengthG, gearG, specG, locationG, lim
     if requestType == haul: # Uses differnt time setting: months[]
         params['months[]'] = getMonthTimestamps(sDate, eDate) # add intermittent months here
     else:
-        if sDate != QDate(): params["startDate"] = f"{sDate.toPython()}" + "T00:00:00.000Z"
+        if sDate != QDate(): params["start"] = f"{sDate.toPython()}" + "T00:00:00.000Z"
         # When we use end of month or year we expect to include last day
-        if eDate != QDate(): params["endDate"] = f"{eDate.toPython()}" + "T23:59:59.999Z"
+        if eDate != QDate(): params["end"] = f"{eDate.toPython()}" + "T23:59:59.999Z"
 
     if requestType == trips or requestType == haul:
-        if len(lengthG) > 0: params["vesselLengthGroups[]"] = lengthG
-        if myVessel: params["fiskeridirVesselIds[]"] = fiskdirId
-        if len(gearG) > 0: params['gearGroupIds[]'] = gearG
-        if len(specG) > 0: params['speciesGroupIds[]'] = specG
+        if len(lengthG) > 0: params["vesselLengthGroups"] = lengthG
+        if myVessel: params["fiskeridirVesselIds"] = fiskdirId
+        if len(gearG) > 0: params['gearGroupIds'] = gearG
+        if len(specG) > 0: params['speciesGroupIds'] = specG
         if len(locationG) > 0: params['catchLocations[]'] = locationG
     else:
         if len(lengthG) > 0 : params["lengthGroup"] = lengthG
-        if myVessel: params["vesselIds[]"] = fiskdirId 
-        else: params["vesselIds[]"] = fiskdirIdGroup
-        if len(gearG) > 0: params['gearGroups[]'] = gearG
+        if myVessel: params["vesselIds"] = fiskdirId 
+        else: params["vesselIds"] = fiskdirIdGroup
+        if len(gearG) > 0: params['gearGroups'] = gearG
         if len(specG) > 0: params['speciesGroupId'] = specG
         if len(locationG) > 0: params['catchLocations[]'] = locationG
 
@@ -169,7 +170,8 @@ def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: boo
     """
     try:
         # Convert JSON to DataFrame
-        df = pd.json_normalize(json_data) if flatten else pd.DataFrame(json_data)
+        df = pd.json_normalize(json_data, max_level=0) if flatten else pd.DataFrame(json_data)
+        
 
         # Create directory if it doesn't exist
         os.makedirs(os.path.dirname(output_file), exist_ok=True)

@@ -73,7 +73,7 @@ def monthsBetweenQdates(start_date, end_date) -> int:
     return months -1 # Subtract 1 because the loop counts the starting month as well
 
 
-def plot(x, y11, y21, title, xlabel):
+def plot(x, y11, y21, title, xlabel, fName = "", show = False):
         ylabel = y11[0]
         y1 = y11[1: len(y11)]
         y2 = y21[1: len(y21)]
@@ -91,7 +91,11 @@ def plot(x, y11, y21, title, xlabel):
         plt.xticks(dx, labels=xf)
         plt.ylabel(ylabel)
         plt.legend()
-        plt.show()
+        if (show):         
+                plt.show()
+        if (fName != ""):
+                plt.savefig(fName) 
+        plt.close()
 
 def noVessels(dict):      
         idList = []

@@ -418,6 +418,10 @@ class MainWindow(QMainWindow):
 
     def bank_button_clicked(self):
         toCsvFile = "output/bank-Report.csv" if self.storeCsv.isChecked() else ""
+        toJsonFile = "output/bank-Report.json"
+        kpi01_pngFile = "output/kpi01"          # Do not specify extension .png on these files !!
+        kpi02_pngFile = "output/kpi02"
+        kpi05_pngFile = "output/kpi05"
         ## get start and stop dates
         # Create item holding input parameters from gui
         gui_data = r.Output('Gadus  Njord', 
@@ -430,11 +434,11 @@ class MainWindow(QMainWindow):
         
         # Calculate dates for all periodes, and all kpi's required
         getDatesArray(self.stopDateEdit.date(), gui_data)             
-        kpi_01(gui_data)
+        kpi_01(gui_data, kpi01_pngFile)
         kpi_02(gui_data)
         kpi_05(gui_data)
-
-         # Find total number of vessels in in group
+       
+         # Find total number of vessels in in group if input data has changed
         if (self.isInputChanged()):
             startDateList = gui_data.datesArray[0]
             endDateList = gui_data.datesArray[1]
@@ -444,13 +448,20 @@ class MainWindow(QMainWindow):
             print ("Antall båter. ", self.nVessels)
 
         gui_data.nVessels = self.nVessels
-        # create json fiole
-        jsonArray = []
-        data = gui_data.createJsonItem()
-        jsonArray.append(data)
-        r.createJson(jsonArray, 'jsonTestFile.json')
+
+        #r.createPlot(gui_data, 'KPI-01: EEOI [g CO2 /(fangst*nm)]', kpi01_pngFile)
+        #r.createPlot(gui_data, 'KPI-02: FUI [g CO2 /fangst]', kpi02_pngFile)
+        #r.createPlot(gui_data, 'KPI-05:', kpi05_pngFile)
+
+        # create json and csv file
         if (toCsvFile != ""):
-            ep.json_to_pandas_csv(jsonArray, toCsvFile)  
+            jsonArray = []
+            data = gui_data.createJsonItem()
+            jsonArray.append(data)
+            r.createJson(jsonArray, toJsonFile)
+            jsonData = jsonArray[0]
+            r.json_to_csv(jsonData, toCsvFile)
+            #ep.json_to_pandas_csv(jsonArray, toCsvFile)  
          
 
     def supplier_button_clicked(self):
@@ -466,6 +477,9 @@ class MainWindow(QMainWindow):
         # Produce graphics and output for EEOI
         toCsvFile = "output/kpi_01-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_01-Report.json"
+        toPdfFile = "output/kpi_01-Report.pdf"
+        toPngFile = "output/kpi01"                   # Do not specify extension .png on these files !!"
+
         # Create item holding input parameters from gui
         gui_data = r.Output('Gadus  Njord', 
                 self.vesselCombo.checked_items_data(), 
@@ -477,11 +491,8 @@ class MainWindow(QMainWindow):
         
         # Calculate dates for all periodes 
         getDatesArray(self.stopDateEdit.date(), gui_data) 
-        
-        # Calculate KPI-01
-        kpi_01(gui_data)  
 
-        # Find total number of vessels in in group
+        # Find total number of vessels in in group if input data has changed
         if (self.isInputChanged()):
             startDateList = gui_data.datesArray[0]
             endDateList = gui_data.datesArray[1]
@@ -491,8 +502,14 @@ class MainWindow(QMainWindow):
             print ("Antall båter. ", self.nVessels)
         
         gui_data.nVessels = self.nVessels
+        
+        # Calculate KPI-01
+        kpi_01(gui_data, toPngFile)  
+
         # create plot
-        r.createPlot(gui_data, 'KPI-01: EEOI [g CO2 /(fangst*nm)]')
+        # r.createPlot(gui_data, 'KPI-01: EEOI [g CO2 /(fangst*nm)]', fName = toPngFile, show = True)
+        r.createPdfDoc(toPdfFile, toPngFile + ".png")
+
 
         # Create JSON and CSV files for these data        
         if (toCsvFile != ""):
@@ -500,12 +517,17 @@ class MainWindow(QMainWindow):
             data = gui_data.createJsonItem()
             jsonArray.append(data)
             r.createJson(jsonArray, toJsonFile)
-            ep.json_to_pandas_csv(jsonArray, toCsvFile)  
+            jsonData = jsonArray[0]
+            r.json_to_csv(jsonData, toCsvFile)
+            
+            #ep.json_to_pandas_csv(jsonArray[0], toCsvFile)
 
 
     def kpi02_button_clicked(self):
+        toPngFile = "output/kpi02"
         # Produce graphics and output for FUI
         toCsvFile = "output/kpi-02-Report.csv" if self.storeCsv.isChecked() else ""
+        toJsonFile = "output/kpi_02-Report.json"
         # Create item holding input parameters from gui
         gui_data = r.Output('Gadus  Njord', 
                 self.vesselCombo.checked_items_data(), 
@@ -518,10 +540,7 @@ class MainWindow(QMainWindow):
         # Calculate dates for all periodes 
         getDatesArray(self.stopDateEdit.date(), gui_data) 
 
-        # Calculate KPI-02
-        kpi_02(gui_data) 
-
-        # Find total number of vessels in in group
+        # Find total number of vessels in in group if input data has changed
         if (self.isInputChanged()):
             startDateList = gui_data.datesArray[0]
             endDateList = gui_data.datesArray[1]
@@ -531,21 +550,27 @@ class MainWindow(QMainWindow):
             print ("Antall båter. ", self.nVessels)
         
         gui_data.nVessels = self.nVessels
+
+        # Calculate KPI-02
+        kpi_02(gui_data, toPngFile) 
+
         # create plot
-        r.createPlot(gui_data, 'KPI-02: FUI [g CO2 /fangst]')
+        #r.createPlot(gui_data, 'KPI-02: FUI [g CO2 /fangst]')
 
-        # create json file
-        jsonArray = []
-        data = gui_data.createJsonItem()
-        jsonArray.append(data)
-        r.createJson(jsonArray, 'jsonTestFile.json')
-
+        # create json and csv file
         if (toCsvFile != ""):
-            ep.json_to_pandas_csv(jsonArray, toCsvFile)  
+            jsonArray = []
+            data = gui_data.createJsonItem()
+            jsonArray.append(data)
+            r.createJson(jsonArray, toJsonFile)
+            jsonData = jsonArray[0]
+            r.json_to_csv(jsonData, toCsvFile)
+            #ep.json_to_pandas_csv(jsonArray, toCsvFile)  
 
     def kpi03_04_button_clicked(self):
         # Produce graphics and output for catch value per ton catch and fuel costs
         toCsvFile = "output/kpi-03_04-Report.csv" if self.storeCsv.isChecked() else ""
+        toJsonFile = "output/kpi_03_04-Report.json"
         # Create item holding input parameters from gui
         gui_data = r.Output('Gadus  Njord', 
                 self.vesselCombo.checked_items_data(), 
@@ -557,36 +582,40 @@ class MainWindow(QMainWindow):
         
         # Calculate dates for all periodes 
         getDatesArray(self.stopDateEdit.date(), gui_data) 
+
+         # Find total number of vessels in in group if input data has changed
+        if (self.isInputChanged()):
+            startDateList = gui_data.datesArray[0]
+            endDateList = gui_data.datesArray[1]
+            entries = len(endDateList)
+            self.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
+            self.setInputChanged(False)
+            print ("Antall båter. ", self.nVessels)
+        
+        gui_data.nVessels = self.nVessels
 
         # Calculate KPI-03
         kpi_03_04(gui_data) 
 
-        # Find total number of vessels in in group
-        if (self.isInputChanged()):
-            startDateList = gui_data.datesArray[0]
-            endDateList = gui_data.datesArray[1]
-            entries = len(endDateList)
-            self.nVessels = getTotalVessels(ep.trips, startDateList[0], endDateList[entries-1], gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG)
-            self.setInputChanged(False)
-            print ("Antall båter. ", self.nVessels)
-        
-        gui_data.nVessels = self.nVessels
         # create plot
-        r.createPlot(gui_data, 'KPI-03/04 netto fortjeneste:')
+        #r.createPlot(gui_data, 'KPI-03/04 netto fortjeneste:')
 
-        # create json file
-        jsonArray = []
-        data = gui_data.createJsonItem()
-        jsonArray.append(data)
-        r.createJson(jsonArray, 'jsonTestFile.json')
-
+        # create json and csv file
         if (toCsvFile != ""):
-            ep.json_to_pandas_csv(jsonArray, toCsvFile)  
+            jsonArray = []
+            data = gui_data.createJsonItem()
+            jsonArray.append(data)
+            r.createJson(jsonArray, toJsonFile)
+            jsonData = jsonArray[0]
+            r.json_to_csv(jsonData, toCsvFile)
+            #ep.json_to_pandas_csv(jsonArray, toCsvFile)  
 
 
     def kpi05_button_clicked(self):
+        toPngFile = "output/kpi05"
         # Produce graphics and output for catch and catch value per yesr
         toCsvFile = "output/kpi-05-Report.csv" if self.storeCsv.isChecked() else ""
+        toJsonFile = "output/kpi_05-Report.json"
         # Create item holding input parameters from gui
         gui_data = r.Output('Gadus  Njord', 
                 self.vesselCombo.checked_items_data(), 
@@ -599,10 +628,7 @@ class MainWindow(QMainWindow):
         # Calculate dates for all periodes 
         getDatesArray(self.stopDateEdit.date(), gui_data) 
 
-        # Calculate KPI-05
-        kpi_05(gui_data) 
-
-        # Find total number of vessels in in group
+        # Find total number of vessels in in group if input data has changed
         if (self.isInputChanged()):
             startDateList = gui_data.datesArray[0]
             endDateList = gui_data.datesArray[1]
@@ -612,17 +638,22 @@ class MainWindow(QMainWindow):
             print ("Antall båter. ", self.nVessels)
         
         gui_data.nVessels = self.nVessels
+
+        # Calculate KPI-05
+        kpi_05(gui_data, toPngFile) 
+
         # create plot
-        r.createPlot(gui_data, 'KPI-05:')
+        #r.createPlot(gui_data, 'KPI-05:', show = True)
 
-        # create json file
-        jsonArray = []
-        data = gui_data.createJsonItem()
-        jsonArray.append(data)
-        r.createJson(jsonArray, 'jsonTestFile.json')
-
+        # create json and csv file
         if (toCsvFile != ""):
-            ep.json_to_pandas_csv(jsonArray, toCsvFile)  
+            jsonArray = []
+            data = gui_data.createJsonItem()
+            jsonArray.append(data)
+            r.createJson(jsonArray, toJsonFile)
+            jsonData = jsonArray[0]
+            r.json_to_csv(jsonData, toCsvFile) 
+            #ep.json_to_pandas_csv(jsonArray, toCsvFile) 
 
     def closeEvent(self, event):
         # do stuff
