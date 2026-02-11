@@ -11,11 +11,12 @@ import pdfExt
 
 
 class Output():
-    def __init__(self, vesselId, group, gear, specie, location, span, periods):
+    def __init__(self, vesselId, vesselRefIds, group, gear, specie, location, span, periods):
         
         super().__init__()
 
         self.vesselId = vesselId
+        self.vesselRefIds = vesselRefIds
         self.lengthG = group
         self.gearG = gear
         self.specG = specie

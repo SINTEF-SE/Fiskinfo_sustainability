@@ -119,19 +119,31 @@ class DatafangstClient:
         # Filters
         # ------------------------------------------------------------------
         if vesselGroups:
-            params["vesselLengthGroups"] = vesselGroups
+            if request_type.endswith("/trips"):
+                params["vesselLengthGroups"] = vesselGroups
+            else:
+                params["lengthGroup"] = vesselGroups
 
         if gearGroups:
-            params["gearGroupIds"] = gearGroups
+            if request_type.endswith("/trips"):
+                params["gearGroupIds"] = gearGroups
+            else:
+                params["gearGroups"] = gearGroups
 
         if speciesGroups:
-            params["speciesGroupIds"] = speciesGroups
+            if request_type.endswith("/trips"):
+                params["speciesGroupIds"] = speciesGroups
+            else:
+                params["speciesGroupId"] = speciesGroups
 
         if locationGroups:
-            params["catchLocations[]"] = locationGroups
+            params["catchLocations"] = locationGroups
 
         if vesselId:
-            params["vesselIds"] = [vesselId]   # API expects list
+            if request_type.endswith("/trips"):
+                params["fiskeridirVesselIds"] = [vesselId]
+            else:
+                params["vesselIds"] = [vesselId]   # API expects list
 
         if limit:
             params["limit"] = limit

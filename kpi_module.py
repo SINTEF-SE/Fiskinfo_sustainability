@@ -80,7 +80,7 @@ def kpi_01(gd, toPngFile: str):
             sDate=sDate, eDate=eDate,
             vesselGroups=gd.lengthG, gearGroups=gd.gearG,
             speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=None,  # reference group
+            vesselId=gd.vesselRefIds,  # reference group
         )
 
         # endpoints return float; coerce and scale to grams
@@ -133,7 +133,7 @@ def kpi_02(gd, toPngFile: str):
             sDate=sDate, eDate=eDate,
             vesselGroups=gd.lengthG, gearGroups=gd.gearG,
             speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=None,
+            vesselId=gd.vesselRefIds,  # reference group
         )
 
         myFuiArray.append(1000.0 * float(my_val or 0))
@@ -192,7 +192,7 @@ def kpi_03_04(gd):
             E_AVERAGE, sDate=sDate, eDate=eDate,
             vesselGroups=gd.lengthG, gearGroups=gd.gearG,
             speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=getattr(gd, "fiskdirId", None),
+            vesselId = gd.vesselId,
         ) or {}
         my_cvf = _safe_get(my_avg, 'catchValuePerFuel')
         my_wpf = _safe_get(my_avg, 'weightPerFuel')
@@ -203,7 +203,7 @@ def kpi_03_04(gd):
             E_AVERAGE, sDate=sDate, eDate=eDate,
             vesselGroups=gd.lengthG, gearGroups=gd.gearG,
             speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=None,
+            vesselId=gd.vesselRefIds,  # reference group
         ) or {}
         av_cvf = _safe_get(av_avg, 'catchValuePerFuel')
         av_wpf = _safe_get(av_avg, 'weightPerFuel')
@@ -270,7 +270,7 @@ def kpi_05(gd, toPngFile: str):
             E_AVERAGE, sDate=sDate, eDate=eDate,
             vesselGroups=gd.lengthG, gearGroups=gd.gearG,
             speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=getattr(gd, "fiskdirId", None),
+            vesselId = gd.vesselId,
         ) or {}
 
         # Reference group
@@ -278,7 +278,7 @@ def kpi_05(gd, toPngFile: str):
             E_AVERAGE, sDate=sDate, eDate=eDate,
             vesselGroups=gd.lengthG, gearGroups=gd.gearG,
             speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=None,
+            vesselId=gd.vesselRefIds,  # reference group
         ) or {}
 
         my_wpf = _safe_get(my_avg, 'weightPerFuel')     # kg per unit fuel

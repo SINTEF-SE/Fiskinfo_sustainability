@@ -14,6 +14,12 @@ from kpi_module import kpi_01, kpi_02, kpi_03_04, kpi_05, getTotalVessels
 
 from datafangst_client import DatafangstClient
 
+# -------------------------
+# Vessel IDs
+# -------------------------
+ID_MY_VESSEL        = 2013063493  # Gadus Njord
+ID_REF_VESSELS      = [1999001513, 2011054408, 2018101213, 2000013339]        # Nordland Havfiske
+#ID_REF_VESSELS      = []
 
 # -------------------------
 # Endpoint constants
@@ -92,7 +98,8 @@ class MainWindow(QMainWindow):
         # -------------------------
         # Basic state
         # -------------------------
-        self.fiskdirId = 2013063493  # Gadus Njord
+        self.vesselId = ID_MY_VESSEL
+        self.vesselRefIds = ID_REF_VESSELS
         self.inputHasChanged = True
         self.nVessels = 0
         self.actionText = ""
@@ -175,7 +182,7 @@ class MainWindow(QMainWindow):
 
         # Catch locations
         layout.addWidget(QLabel("Fangstfelt:"), 3, 2)
-        self.locationText = QTextEdit("All")
+        self.locationText = QTextEdit()
         self.locationText.setStyleSheet("QTextEdit { background-color: lightblue; color: black; }")
         self.locationText.textChanged.connect(self.inputChanged)
         layout.addWidget(self.locationText, 3, 3)
@@ -564,7 +571,8 @@ class MainWindow(QMainWindow):
 
         # Prepare KPI input
         gui_data = r.Output(
-            'Gadus  Njord',
+            self.vesselId,
+            self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
             self.gearCombo.checked_items_data(),
             self.speciesCombo.checked_items_data(),
@@ -576,15 +584,18 @@ class MainWindow(QMainWindow):
         getDatesArray(self.stopDateEdit.date(), gui_data)
 
         # Update vessels count if input changed
-        if self.isInputChanged():
-            startDateList, endDateList = gui_data.datesArray
-            if endDateList:
-                self.nVessels = getTotalVessels(
-                    E_TRIPS,
-                    startDateList[0], endDateList[-1],
-                    gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
-                )
-            self.setInputChanged(False)
+        if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
+            if self.isInputChanged():
+                startDateList, endDateList = gui_data.datesArray
+                if endDateList:
+                    self.nVessels = getTotalVessels(
+                        E_TRIPS,
+                        startDateList[0], endDateList[-1],
+                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                    )
+                self.setInputChanged(False)
+        else:
+            self.nVessels = len(self.vesselRefIds)
 
         gui_data.nVessels = self.nVessels
 
@@ -615,7 +626,8 @@ class MainWindow(QMainWindow):
         toPngFile = "output/kpi01"
 
         gui_data = r.Output(
-            self.fiskdirId,
+            self.vesselId,
+            self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
             self.gearCombo.checked_items_data(),
             self.speciesCombo.checked_items_data(),
@@ -626,17 +638,21 @@ class MainWindow(QMainWindow):
 
         getDatesArray(self.stopDateEdit.date(), gui_data)
 
-        if self.isInputChanged():
-            startDateList, endDateList = gui_data.datesArray
-            if endDateList:
-                self.nVessels = getTotalVessels(
-                    E_TRIPS,
-                    startDateList[0], endDateList[-1],
-                    gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
-                )
-            self.setInputChanged(False)
+        if (self.vesselRefIds == None) or (self.vesselRefIds == []):          
+            if self.isInputChanged():
+                startDateList, endDateList = gui_data.datesArray
+                if endDateList:
+                    self.nVessels = getTotalVessels(
+                        E_TRIPS,
+                        startDateList[0], endDateList[-1],
+                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                    )
+                self.setInputChanged(False)
+        else:
+            self.nVessels = len(self.vesselRefIds)
 
         gui_data.nVessels = self.nVessels
+        print("ANTALL  båter ", self.nVessels)
 
         kpi_01(gui_data, toPngFile)
         r.createPdfDoc(toPdfFile, toPngFile + ".png")
@@ -652,7 +668,8 @@ class MainWindow(QMainWindow):
         toJsonFile = "output/kpi_02-Report.json"
 
         gui_data = r.Output(
-            self.fiskdirId,
+            self.vesselId,
+            self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
             self.gearCombo.checked_items_data(),
             self.speciesCombo.checked_items_data(),
@@ -663,15 +680,18 @@ class MainWindow(QMainWindow):
 
         getDatesArray(self.stopDateEdit.date(), gui_data)
 
-        if self.isInputChanged():
-            startDateList, endDateList = gui_data.datesArray
-            if endDateList:
-                self.nVessels = getTotalVessels(
-                    E_TRIPS,
-                    startDateList[0], endDateList[-1],
-                    gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
-                )
-            self.setInputChanged(False)
+        if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
+            if self.isInputChanged():
+                startDateList, endDateList = gui_data.datesArray
+                if endDateList:
+                    self.nVessels = getTotalVessels(
+                        E_TRIPS,
+                        startDateList[0], endDateList[-1],
+                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                    )
+                self.setInputChanged(False)
+        else:
+            self.nVessels = len(self.vesselRefIds)
 
         gui_data.nVessels = self.nVessels
         kpi_02(gui_data, toPngFile)
@@ -686,7 +706,8 @@ class MainWindow(QMainWindow):
         toJsonFile = "output/kpi_03_04-Report.json"
 
         gui_data = r.Output(
-            'Gadus  Njord',
+            self.vesselId,
+            self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
             self.gearCombo.checked_items_data(),
             self.speciesCombo.checked_items_data(),
@@ -697,15 +718,18 @@ class MainWindow(QMainWindow):
 
         getDatesArray(self.stopDateEdit.date(), gui_data)
 
-        if self.isInputChanged():
-            startDateList, endDateList = gui_data.datesArray
-            if endDateList:
-                self.nVessels = getTotalVessels(
-                    E_TRIPS,
-                    startDateList[0], endDateList[-1],
-                    gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
-                )
-            self.setInputChanged(False)
+        if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
+            if self.isInputChanged():
+                startDateList, endDateList = gui_data.datesArray
+                if endDateList:
+                    self.nVessels = getTotalVessels(
+                        E_TRIPS,
+                        startDateList[0], endDateList[-1],
+                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                    )
+                self.setInputChanged(False)
+        else:
+            self.nVessels = len(self.vesselRefIds)
 
         gui_data.nVessels = self.nVessels
         kpi_03_04(gui_data)
@@ -721,7 +745,8 @@ class MainWindow(QMainWindow):
         toJsonFile = "output/kpi_05-Report.json"
 
         gui_data = r.Output(
-            'Gadus  Njord',
+            self.vesselId,
+            self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
             self.gearCombo.checked_items_data(),
             self.speciesCombo.checked_items_data(),
@@ -732,15 +757,18 @@ class MainWindow(QMainWindow):
 
         getDatesArray(self.stopDateEdit.date(), gui_data)
 
-        if self.isInputChanged():
-            startDateList, endDateList = gui_data.datesArray
-            if endDateList:
-                self.nVessels = getTotalVessels(
-                    E_TRIPS,
-                    startDateList[0], endDateList[-1],
-                    gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
-                )
-            self.setInputChanged(False)
+        if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
+            if self.isInputChanged():
+                startDateList, endDateList = gui_data.datesArray
+                if endDateList:
+                    self.nVessels = getTotalVessels(
+                        E_TRIPS,
+                        startDateList[0], endDateList[-1],
+                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                    )
+                self.setInputChanged(False)
+        else:
+            self.nVessels = len(self.vesselRefIds)
 
         gui_data.nVessels = self.nVessels
         kpi_05(gui_data, toPngFile)
