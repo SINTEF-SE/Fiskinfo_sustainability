@@ -10,15 +10,16 @@ from PySide6.QtCore import QSize, QDate
 from gui_helpers import *
 from reports import *
 #import reports as r
-from kpi_module import kpi_01, kpi_02, kpi_03_04, kpi_05, getTotalVessels
+from kpi import kpi_01, kpi_02, kpi_03_04, kpi_05, getTotalVessels
 
 from datafangst_client import DatafangstClient
+from utility import *
 
 # -------------------------
 # Vessel IDs
 # -------------------------
 ID_MY_VESSEL        = 2013063493  # Gadus Njord
-ID_REF_VESSELS      = [1999001513, 2011054408, 2018101213, 2000013339]        # Nordland Havfiske
+ID_REF_VESSELS      = [1999001513, 2011054408, 2018101213, 2000013339, 2013063493]        # Nordland Havfiske
 #ID_REF_VESSELS      = []
 
 # -------------------------
@@ -351,6 +352,23 @@ class MainWindow(QMainWindow):
         pef_action.triggered.connect(self.pef_button_clicked)
         pef_menu.addAction(pef_action)
 
+    class kpi_data():
+        def __init__(self, vesselId: int, vesselRefIds: list[int],
+                 lengthgroup: list[str], gear: list[str], specie: list[str],
+                 location: list[str], span: int, periods: int):
+
+            self.vesselId = vesselId
+            self.vesselRefIds = vesselRefIds
+            self.lengthG = lengthgroup
+            self.gearG = gear
+            self.specG = specie
+            self.locG = location
+            self.span = span
+            self.noPeriods = periods
+            self.dataArray = []     #create emty arry to be filled in by kpi measurements
+            self.nVessels = 0
+
+
     # -------------------------
     # Change tracking
     # -------------------------
@@ -570,7 +588,7 @@ class MainWindow(QMainWindow):
         kpi05_pngFile = "output/kpi05"
 
         # Prepare KPI input
-        gui_data = r.Output(
+        this_kpiData = self.kpi_data(
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -581,34 +599,34 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), gui_data)
+        getDatesArray(self.stopDateEdit.date(), this_kpiData)
 
         # Update vessels count if input changed
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
             if self.isInputChanged():
-                startDateList, endDateList = gui_data.datesArray
+                startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
                     self.nVessels = getTotalVessels(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
-                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
                     )
                 self.setInputChanged(False)
         else:
             self.nVessels = len(self.vesselRefIds)
 
-        gui_data.nVessels = self.nVessels
+        this_kpiData.nVessels = self.nVessels
 
         # KPIs
-        kpi_01(gui_data, kpi01_pngFile)
-        kpi_02(gui_data, kpi02_pngFile)
-        kpi_05(gui_data, kpi05_pngFile)
+        kpi_01(this_kpiData, kpi01_pngFile)
+        kpi_02(this_kpiData, kpi02_pngFile)
+        kpi_05(this_kpiData, kpi05_pngFile)
 
         # Export
         if toCsvFile:
-            jsonArray = [gui_data.createJsonItem()]
-            r.createJson(jsonArray, toJsonFile)
-            r.json_to_csv(jsonArray[0], toCsvFile)
+            jsonArray = [createJsonItem(this_kpiData)]
+            createJson(jsonArray, toJsonFile)
+            json_to_csv(jsonArray[0], toCsvFile)
 
     def supplier_button_clicked(self):
         QMessageBox.information(self, "Supplier", "Ikke implementert ennå.")
@@ -625,7 +643,7 @@ class MainWindow(QMainWindow):
         toPdfFile = "output/kpi_01-Report.pdf"
         toPngFile = "output/kpi01"
 
-        gui_data = r.Output(
+        this_kpiData = self.kpi_data(
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -636,38 +654,37 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), gui_data)
+        getDatesArray(self.stopDateEdit.date(), this_kpiData)
 
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):          
             if self.isInputChanged():
-                startDateList, endDateList = gui_data.datesArray
+                startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
                     self.nVessels = getTotalVessels(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
-                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
                     )
                 self.setInputChanged(False)
         else:
             self.nVessels = len(self.vesselRefIds)
 
-        gui_data.nVessels = self.nVessels
-        print("ANTALL  båter ", self.nVessels)
+        this_kpiData.nVessels = self.nVessels
 
-        kpi_01(gui_data, toPngFile)
-        r.createPdfDoc(toPdfFile, toPngFile + ".png")
+        kpi_01(this_kpiData, toPngFile)
+        createPdfDoc(toPdfFile, toPngFile + ".png")
 
         if toCsvFile:
-            jsonArray = [gui_data.createJsonItem()]
-            r.createJson(jsonArray, toJsonFile)
-            r.json_to_csv(jsonArray[0], toCsvFile)
+            jsonArray = [createJsonItem(this_kpiData)]
+            createJson(jsonArray, toJsonFile)
+            json_to_csv(jsonArray[0], toCsvFile)
 
     def kpi02_button_clicked(self):
         toPngFile = "output/kpi02"
         toCsvFile = "output/kpi-02-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_02-Report.json"
 
-        gui_data = r.Output(
+        this_kpiData = self.kpi_data(
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -678,34 +695,34 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), gui_data)
+        getDatesArray(self.stopDateEdit.date(), this_kpiData)
 
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
             if self.isInputChanged():
-                startDateList, endDateList = gui_data.datesArray
+                startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
                     self.nVessels = getTotalVessels(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
-                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
                     )
                 self.setInputChanged(False)
         else:
             self.nVessels = len(self.vesselRefIds)
 
-        gui_data.nVessels = self.nVessels
-        kpi_02(gui_data, toPngFile)
+        this_kpiData.nVessels = self.nVessels
+        kpi_02(this_kpiData, toPngFile)
 
         if toCsvFile:
-            jsonArray = [gui_data.createJsonItem()]
-            r.createJson(jsonArray, toJsonFile)
-            r.json_to_csv(jsonArray[0], toCsvFile)
+            jsonArray = [this_kpiData.createJsonItem()]
+            createJson(jsonArray, toJsonFile)
+            json_to_csv(jsonArray[0], toCsvFile)
 
     def kpi03_04_button_clicked(self):
         toCsvFile = "output/kpi-03_04-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_03_04-Report.json"
 
-        gui_data = r.Output(
+        this_kpiData = self.kpi_data(
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -716,35 +733,35 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), gui_data)
+        getDatesArray(self.stopDateEdit.date(), this_kpiData)
 
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
             if self.isInputChanged():
-                startDateList, endDateList = gui_data.datesArray
+                startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
                     self.nVessels = getTotalVessels(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
-                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
                     )
                 self.setInputChanged(False)
         else:
             self.nVessels = len(self.vesselRefIds)
 
-        gui_data.nVessels = self.nVessels
-        kpi_03_04(gui_data)
+        this_kpiData.nVessels = self.nVessels
+        kpi_03_04(this_kpiData)
 
         if toCsvFile:
-            jsonArray = [gui_data.createJsonItem()]
-            r.createJson(jsonArray, toJsonFile)
-            r.json_to_csv(jsonArray[0], toCsvFile)
+            jsonArray = [this_kpiData.createJsonItem()]
+            createJson(jsonArray, toJsonFile)
+            json_to_csv(jsonArray[0], toCsvFile)
 
     def kpi05_button_clicked(self):
         toPngFile = "output/kpi05"
         toCsvFile = "output/kpi-05-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_05-Report.json"
 
-        gui_data = r.Output(
+        this_kpiData = self.kpi_data(
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -755,28 +772,28 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), gui_data)
+        getDatesArray(self.stopDateEdit.date(), this_kpiData)
 
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
             if self.isInputChanged():
-                startDateList, endDateList = gui_data.datesArray
+                startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
                     self.nVessels = getTotalVessels(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
-                        gui_data.lengthG, gui_data.gearG, gui_data.specG, gui_data.locG
+                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
                     )
                 self.setInputChanged(False)
         else:
             self.nVessels = len(self.vesselRefIds)
 
-        gui_data.nVessels = self.nVessels
-        kpi_05(gui_data, toPngFile)
+        this_kpiData.nVessels = self.nVessels
+        kpi_05(this_kpiData, toPngFile)
 
         if toCsvFile:
-            jsonArray = [gui_data.createJsonItem()]
-            r.createJson(jsonArray, toJsonFile)
-            r.json_to_csv(jsonArray[0], toCsvFile)
+            jsonArray = [this_kpiData.createJsonItem()]
+            createJson(jsonArray, toJsonFile)
+            json_to_csv(jsonArray[0], toCsvFile)
 
     # -------------------------
     # Window close

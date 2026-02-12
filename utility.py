@@ -85,7 +85,7 @@ def plot(x, y11, y21, title, xlabel, fName = "", show = False):
         
         plt.figure()
         plt.bar(dx - width/2, y1, width = width, label = "Min båt", color='red')
-        plt.bar(dx + width/2, y2, width = width, label = "Gjennomsnitt", color = 'blue')
+        plt.bar(dx + width/2, y2, width = width, label = "Referanse", color = 'blue')
         plt.title(title)
         plt.xlabel(xlabel)
         plt.xticks(dx, labels=xf)

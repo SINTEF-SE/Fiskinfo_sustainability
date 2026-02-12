@@ -5,3 +5,5 @@ Pipfile
 Pipfile.lock
 *.csv
 *.json
+*_old.py
+*_AI.py
