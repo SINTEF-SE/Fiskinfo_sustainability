@@ -1,6 +1,8 @@
 output/
 __pycache__/
 .idea/
+Kopi/
+data/
 Pipfile
 Pipfile.lock
 *.csv

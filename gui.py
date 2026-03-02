@@ -683,6 +683,7 @@ class MainWindow(QMainWindow):
         toPngFile = "output/kpi02"
         toCsvFile = "output/kpi-02-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_02-Report.json"
+        toPdfFile = "output/kpi_02-Report.pdf"
 
         this_kpiData = self.kpi_data(
             self.vesselId,
@@ -712,15 +713,17 @@ class MainWindow(QMainWindow):
 
         this_kpiData.nVessels = self.nVessels
         kpi_02(this_kpiData, toPngFile)
+        createPdfDoc(toPdfFile, toPngFile + ".png")
 
         if toCsvFile:
-            jsonArray = [this_kpiData.createJsonItem()]
+            jsonArray = [createJsonItem(this_kpiData)]
             createJson(jsonArray, toJsonFile)
             json_to_csv(jsonArray[0], toCsvFile)
 
     def kpi03_04_button_clicked(self):
         toCsvFile = "output/kpi-03_04-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_03_04-Report.json"
+        toPdfFile = "output/kpi_03_04-Report.pdf"
 
         this_kpiData = self.kpi_data(
             self.vesselId,
@@ -752,7 +755,7 @@ class MainWindow(QMainWindow):
         kpi_03_04(this_kpiData)
 
         if toCsvFile:
-            jsonArray = [this_kpiData.createJsonItem()]
+            jsonArray = [createJsonItem(this_kpiData)]
             createJson(jsonArray, toJsonFile)
             json_to_csv(jsonArray[0], toCsvFile)
 
@@ -760,6 +763,7 @@ class MainWindow(QMainWindow):
         toPngFile = "output/kpi05"
         toCsvFile = "output/kpi-05-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_05-Report.json"
+        toPdfFile = "output/kpi_05-Report.pdf"
 
         this_kpiData = self.kpi_data(
             self.vesselId,
@@ -789,9 +793,10 @@ class MainWindow(QMainWindow):
 
         this_kpiData.nVessels = self.nVessels
         kpi_05(this_kpiData, toPngFile)
+        createPdfDoc(toPdfFile, toPngFile + ".png")
 
         if toCsvFile:
-            jsonArray = [this_kpiData.createJsonItem()]
+            jsonArray = [createJsonItem(this_kpiData)]
             createJson(jsonArray, toJsonFile)
             json_to_csv(jsonArray[0], toCsvFile)
 
