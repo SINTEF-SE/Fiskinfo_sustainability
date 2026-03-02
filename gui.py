@@ -10,7 +10,7 @@ from PySide6.QtCore import QSize, QDate
 from gui_helpers import *
 from reports import *
 #import reports as r
-from kpi import kpi_01, kpi_02, kpi_03_04, kpi_05, getTotalVessels
+from KPI import kpi_01, kpi_02, kpi_03_04, kpi_05, getTotalVessels
 
 from datafangst_client import DatafangstClient
 from utility import *
