@@ -10,7 +10,7 @@ from PySide6.QtCore import QSize, QDate
 from gui_helpers import *
 from reports import *
 #import reports as r
-from KPI import kpi_01, kpi_02, kpi_03_04, kpi_05, getTotalVessels
+from KPI import kpi_01, kpi_02, kpi_03_04, kpi_05, getAllTripsInPeriod
 
 from datafangst_client import DatafangstClient
 from utility import *
@@ -105,6 +105,8 @@ class MainWindow(QMainWindow):
         self.nVessels = 0
         self.actionText = ""
         self.getParams = ""
+        self.myTrips = None
+        self.refTrips = None
 
         # Shared client (fast & clean)
         self.client = DatafangstClient()
@@ -353,10 +355,11 @@ class MainWindow(QMainWindow):
         pef_menu.addAction(pef_action)
 
     class kpi_data():
-        def __init__(self, vesselId: int, vesselRefIds: list[int],
+        def __init__(self, endDate: QDate, vesselId: int, vesselRefIds: list[int],
                  lengthgroup: list[str], gear: list[str], specie: list[str],
                  location: list[str], span: int, periods: int):
 
+            self.endDate = endDate
             self.vesselId = vesselId
             self.vesselRefIds = vesselRefIds
             self.lengthG = lengthgroup
@@ -468,7 +471,8 @@ class MainWindow(QMainWindow):
 
     def getTrips_button_clicked(self):
         toCsvFile = "output/trips.csv" if self.storeCsv.isChecked() else ""
-        vesselId = self.fiskdirId if self.myVessel.isChecked() else None
+        #vesselId = self.fiskdirId if self.myVessel.isChecked() else None
+        vesselId = self.vesselId if self.myVessel.isChecked() else None
 
         self.client.get(
             E_TRIPS,
@@ -487,11 +491,14 @@ class MainWindow(QMainWindow):
 
     def getAvTripBenchmarks_button_clicked(self):
         toCsvFile = "output/avTripBenchmarks.csv" if self.storeCsv.isChecked() else ""
+        vesselId = self.vesselId if self.myVessel.isChecked() else None
         self.client.get(
             E_TRIP_AVG,
             sDate=self.startDateEdit.date(),
             eDate=self.stopDateEdit.date(),
-            auth=True,
+            gearGroups=self.gearCombo.checked_items_data(),
+            vesselGroups=self.vesselCombo.checked_items_data(),
+            vesselId=vesselId,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
@@ -511,7 +518,7 @@ class MainWindow(QMainWindow):
 
     def getAvEEOI_button_clicked(self):
         toCsvFile = "output/avEEOI.csv" if self.storeCsv.isChecked() else ""
-        vesselId = self.fiskdirId if self.myVessel.isChecked() else None
+        vesselId = self.vesselId if self.myVessel.isChecked() else None
 
         self.client.get(
             E_AVG_EEOI,
@@ -606,7 +613,7 @@ class MainWindow(QMainWindow):
             if self.isInputChanged():
                 startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
-                    self.nVessels = getTotalVessels(
+                    self.nVessels = getAllTripsInPeriod(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
                         this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
@@ -644,6 +651,7 @@ class MainWindow(QMainWindow):
         toPngFile = "output/kpi01"
 
         this_kpiData = self.kpi_data(
+            self.stopDateEdit.date(),
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -654,13 +662,13 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), this_kpiData)
+        getDatesArray(this_kpiData)
 
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):          
             if self.isInputChanged():
                 startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
-                    self.nVessels = getTotalVessels(
+                    self.nVessels = getAllTripsInPeriod(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
                         this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
@@ -686,6 +694,7 @@ class MainWindow(QMainWindow):
         toPdfFile = "output/kpi_02-Report.pdf"
 
         this_kpiData = self.kpi_data(
+            self.stopDateEdit.date(),
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -696,13 +705,13 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), this_kpiData)
+        getDatesArray(this_kpiData)
 
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
             if self.isInputChanged():
                 startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
-                    self.nVessels = getTotalVessels(
+                    self.nVessels = getAllTripsInPeriod(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
                         this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
@@ -726,6 +735,7 @@ class MainWindow(QMainWindow):
         toPdfFile = "output/kpi_03_04-Report.pdf"
 
         this_kpiData = self.kpi_data(
+            self.stopDateEdit.date(),
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -736,13 +746,13 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), this_kpiData)
+        getDatesArray(this_kpiData)
 
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
             if self.isInputChanged():
                 startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
-                    self.nVessels = getTotalVessels(
+                    self.nVessels = getAllTripsInPeriod(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
                         this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
@@ -766,6 +776,7 @@ class MainWindow(QMainWindow):
         toPdfFile = "output/kpi_05-Report.pdf"
 
         this_kpiData = self.kpi_data(
+            self.stopDateEdit.date(),
             self.vesselId,
             self.vesselRefIds,
             self.vesselCombo.checked_items_data(),
@@ -776,13 +787,13 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(self.stopDateEdit.date(), this_kpiData)
+        getDatesArray(this_kpiData)
 
         if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
             if self.isInputChanged():
                 startDateList, endDateList = this_kpiData.datesArray
                 if endDateList:
-                    self.nVessels = getTotalVessels(
+                    self.nVessels, retArray = getAllTripsInPeriod(
                         E_TRIPS,
                         startDateList[0], endDateList[-1],
                         this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
@@ -793,6 +804,8 @@ class MainWindow(QMainWindow):
 
         this_kpiData.nVessels = self.nVessels
         kpi_05(this_kpiData, toPngFile)
+        #kpi_05(self.nVessels, retArray, toPngFile)
+
         createPdfDoc(toPdfFile, toPngFile + ".png")
 
         if toCsvFile:

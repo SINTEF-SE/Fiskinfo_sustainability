@@ -1,13 +1,14 @@
 
 # kpi_module.py
-from typing import List, Optional, Any, Dict
+from typing import List, Optional, Any, Dict, Mapping, MutableMapping, Iterable, Tuple
+import json
 from collections import Counter
 
 from PySide6.QtCore import QDate
 from datafangst_client import DatafangstClient
 
 # Only import what you need from utility to avoid namespace clashes
-from utility import nlg, monthsBetweenQdates, plot, noVessels, findMainSpecie
+from utility import nlg, monthsBetweenQdates, plot, noVessels, findMainSpecie, getDatesArray
 
 PRICE_DIFF = 5  # NOK: approx difference between autodiesel and MGO
 
@@ -15,6 +16,7 @@ PRICE_DIFF = 5  # NOK: approx difference between autodiesel and MGO
 E_AV_EEOI   = "v1.0/trip/benchmarks/average_eeoi"
 E_AV_FUI    = "v1.0/trip/benchmarks/average_fui"
 E_AVERAGE   = "v1.0/trip/benchmarks/average"
+E_TRIPS     = "v1.0/trips"
 
 # --- SSB PXWeb endpoint base (fixed &amp; -> &) ---
 SSB_PRICE_BASE = (
@@ -39,6 +41,43 @@ def _safe_get(d: Dict[str, Any], key: str, default: float = 0.0) -> float:
         return float(d.get(key, default))
     except Exception:
         return default
+    
+def _safe_get_dict(d: Mapping[str, Any], key: str, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    fallback: Dict[str, Any] = dict(default) if isinstance(default, dict) else {}
+    """Get dictionary safely from dict, coercing to dict."""
+    
+    try:
+        value = d.get(key, None)
+        if value is None:
+            return fallback
+
+        # Fast path for mappings
+        if isinstance(value, (dict, Mapping, MutableMapping)):
+            return dict(value)
+
+        # JSON object in a string
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, dict):
+                    return parsed
+                else:
+                    return fallback
+            except Exception:
+                return fallback
+
+        # Iterable of pairs (e.g., [("a", 1), ("b", 2)])
+        if isinstance(value, Iterable) and not isinstance(value, (str, bytes)):
+            try:
+                return dict(value)  # will raise if not convertible
+            except Exception:
+                return fallback
+
+        # Anything else is not acceptable
+        return fallback
+    except Exception:
+        return fallback
+
 
 def _safe_div(n: float, d: float, fallback: float = 0.0) -> float:
     """Safe division with fallback when denominator is 0/None."""
@@ -160,8 +199,8 @@ def kpi_02(gd, toPngFile: str):
 # ---------------------------------------------------------------------
 def kpi_03_04(gd):
     """Compute and plot:
-       KPI-03: Netto fortjeneste per tonn fisk [NOK/tonn]
-       KPI-04: Netto fortjeneste per time [NOK/time]
+       KPI-03: Netto fortjeneste per tonn fisk [NOK/tonn] ((fangstverdi - drivstoffkostnad) / tonn fangst)
+       KPI-04: Netto fortjeneste per time [NOK/time]      ((fangstverdi - drivstoffkostnad) / timer)
     """
     df_client = _new_client()
     ssb_client = _new_client()  # used only for request(); auth=False
@@ -175,10 +214,10 @@ def kpi_03_04(gd):
         print("kpi_03_04: No dates provided.")
         return
 
-    myRevPerTonWeightArray = ['Netto fortjeneste per tonn fisk']
-    avRevPerTonWeightArray = ['Gj.snitt Netto fortjeneste per tonn fisk']
-    myRevPerHourArray = ['Netto fortjeneste per time']
-    avRevPerHourArray = ['Gj.snitt Netto fortjeneste per time']
+    myRevPerTonWeightArray = ['Netto fortjeneste per tonn fisk [NOK]']
+    avRevPerTonWeightArray = ['Gj.snitt Netto fortjeneste per tonn fisk [NOK]']
+    myRevPerHourArray = ['Netto fortjeneste per time [NOK])']
+    avRevPerHourArray = ['Gj.snitt Netto fortjeneste per time [NOK]']
 
     for sDate, eDate in zip(startDateList, endDateList):
         # SSB price for the month of sDate
@@ -214,8 +253,8 @@ def kpi_03_04(gd):
         av_rev_per_ton = _safe_div(av_cvf - price, av_wpf) * 1000.0
 
         # NOK/time
-        my_rev_per_hour = _safe_div((my_cvf - price) * my_wpf, my_wph)
-        av_rev_per_hour = _safe_div((av_cvf - price) * av_wpf, av_wph)
+        my_rev_per_hour = _safe_div((my_cvf - price) * my_wph, my_wpf)
+        av_rev_per_hour = _safe_div((av_cvf - price) * av_wph, av_wpf)
 
         myRevPerTonWeightArray.append(my_rev_per_ton)
         avRevPerTonWeightArray.append(av_rev_per_ton)
@@ -249,8 +288,8 @@ def kpi_03_04(gd):
 # KPI-05: Annual catch and catch value
 # ---------------------------------------------------------------------
 def kpi_05(gd, toPngFile: str):
-    """KPI-05: Årlig fangst [Tonn/År] og fangstverdi [NOK/År]."""
-    client = _new_client()
+    """KPI-05: Årlig fangst [Tonn/År] og fangstverdi [mill. NOK/År]."""
+    #client = _new_client()
     toPngFile05_1 = "output/kpi05_1"
 
     norskLgroup = _norsk_length_group(gd.lengthG)
@@ -259,45 +298,88 @@ def kpi_05(gd, toPngFile: str):
         print("kpi_05: No dates provided.")
         return
 
-    myCatchArray = ['Fangst i tonn']
-    myCatchValueArray = ['Fangstverdi']
-    avCatchArray = ['Gj.snitt fangst i tonn']
-    avCatchValueArray = ['Gj.snitt fangstverdi']
+    myCatchArray = ['Fangst [tonn]']
+    myCatchValueArray = ['Fangstverdi [mill. NOK]']
+    avCatchArray = ['Gj.snitt fangst [tonn]']
+    avCatchValueArray = ['Gj.snitt fangstverdi [mill. NOK]']
+
+    page_size = 100
 
     for sDate, eDate in zip(startDateList, endDateList):
-        # My vessel
-        my_avg = client.get(
-            E_AVERAGE, sDate=sDate, eDate=eDate,
-            vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-            speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId = gd.vesselId,
-        ) or {}
+        ##############################################
+        # Collect data from all my trips in the period
+        ##############################################
+        weight = 0
+        price = 0
+        fuel = 0
+        distance = 0    
+        offset = 0
+        my_items: List[Dict[str, Any]] = []
+        
+        while True:
+            client = _new_client()
+            page = client.get(
+                E_TRIPS, sDate=sDate, eDate=eDate,
+                vesselGroups=gd.lengthG, gearGroups=gd.gearG,
+                speciesGroups=gd.specG, locationGroups=gd.locG,
+                vesselId = gd.vesselId, limit = page_size, offset = offset
+            ) or {}
+            
+            if not page or not isinstance(page, list):
+                break
 
-        # Reference group
-        av_avg = client.get(
-            E_AVERAGE, sDate=sDate, eDate=eDate,
-            vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-            speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=gd.vesselRefIds,  # reference group
-        ) or {}
+            my_items.extend(page)
+            if len(page) < page_size:
+                break
+            offset += page_size
+            
+        for tur in my_items:
+                delivery = _safe_get_dict(tur, 'delivery')
+                weight += _safe_get(delivery, 'totalLivingWeight')
+                price += _safe_get(delivery, 'totalPriceForFisher')
+                fuel += _safe_get(tur, 'fuelConsumption')
+                distance += _safe_get(tur, 'distance')
+        
+        #####################################################################
+        # Collect data from trips in the reference group in the period
+        #####################################################################
+        av_Weight = 0
+        av_Price = 0
+        offset = 0
+        all_items: List[Dict[str, Any]] = []
 
-        my_wpf = _safe_get(my_avg, 'weightPerFuel')     # kg per unit fuel
-        my_fc  = _safe_get(my_avg, 'fuelConsumption')   # unit fuel
-        av_wpf = _safe_get(av_avg, 'weightPerFuel')
-        av_fc  = _safe_get(av_avg, 'fuelConsumption')
-        my_cvf = _safe_get(my_avg, 'catchValuePerFuel')
-        av_cvf = _safe_get(av_avg, 'catchValuePerFuel')
+        while True:
+            client = _new_client()
+            page = client.get(
+                E_TRIPS, sDate=sDate, eDate=eDate,
+                vesselGroups=gd.lengthG, gearGroups=gd.gearG,
+                speciesGroups=gd.specG, locationGroups=gd.locG,
+                vesselId = gd.vesselRefIds,  # reference group
+                limit = page_size, offset = offset
+            ) or {}
 
-        # Convert kg → tonn; value is NOK
-        my_catch_t = (my_wpf * my_fc) / 1000.0
-        av_catch_t = (av_wpf * av_fc) / 1000.0
-        my_value   = (my_cvf * my_fc) / 1000.0
-        av_value   = (av_cvf * av_fc) / 1000.0
+            if not page or not isinstance(page, list):
+                break
 
-        myCatchArray.append(my_catch_t)
-        avCatchArray.append(av_catch_t)
-        myCatchValueArray.append(my_value)
-        avCatchValueArray.append(av_value)
+            all_items.extend(page)
+            if len(page) < page_size:
+                break
+            offset += page_size
+
+        for tur in all_items:
+            delivery = _safe_get_dict(tur, 'delivery')
+            av_Weight += _safe_get(delivery, 'totalLivingWeight')
+            av_Price += _safe_get(delivery, 'totalPriceForFisher')
+            #fuel += _safe_get(tur, 'fuelConsumption')
+            #distance += _safe_get(tur, 'distance')
+
+        av_Weight = av_Weight / len(gd.vesselRefIds)
+        av_Price = av_Price / len(gd.vesselRefIds)
+
+        myCatchArray.append(weight / 1000)
+        avCatchArray.append(av_Weight / 1000)
+        myCatchValueArray.append(price / 1000 / 1000)
+        avCatchValueArray.append(av_Price / 1000 / 1000)
 
     gd.dataArray.append(myCatchArray)
     gd.dataArray.append(avCatchArray)
@@ -312,7 +394,7 @@ def kpi_05(gd, toPngFile: str):
     span = monthsBetweenQdates(startDateList[0], endDateList[0])
 
     title = (
-        "KPI-05: Årlig fangst [Tonn / År] aggregert over {months} måneder\n"
+        "KPI-05: Fangst [Tonn] aggregert over {months} måneder\n"
         "Lengde: {vGroup}, Redskap: {gGroup}"
     ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
     plot(endDateList, myCatchArray, avCatchArray, title,
@@ -320,17 +402,91 @@ def kpi_05(gd, toPngFile: str):
          fName=toPngFile)
 
     title = (
-        "KPI-05: Årlig fangstverdi [NOK / År] aggregert over {months} måneder\n"
+        "KPI-05: Fangstverdi [mill. NOK] aggregert over {months} måneder\n"
         "Lengde: {vGroup}, Redskap: {gGroup}"
     ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
     plot(endDateList, myCatchValueArray, avCatchValueArray, title,
          "{antall} båter i referansegruppen".format(antall=gd.nVessels),
          fName=toPngFile05_1)
+    
+
+# ---------------------------------------------------------------------
+# KPI-05: Annual catch and catch value
+# ---------------------------------------------------------------------
+'''def kpi_05(noVessel, dataArray, toPngFile: str):
+    """KPI-05: Årlig fangst [Tonn/År] og fangstverdi [mill. NOK/År]."""
+    #client = _new_client()
+    toPngFile05_1 = "output/kpi05_1"
+
+    norskLgroup = _norsk_length_group(gd.lengthG)
+    startDateList, endDateList = gd.datesArray
+    if not startDateList or not endDateList:
+        print("kpi_05: No dates provided.")
+        return
+
+    myCatchArray = ['Fangst [tonn]']
+    myCatchValueArray = ['Fangstverdi [mill. NOK]']
+    avCatchArray = ['Gj.snitt fangst [tonn]']
+    avCatchValueArray = ['Gj.snitt fangstverdi [mill. NOK]']
+
+    for element in dataArray:
+        my_items = element[2]     
+        for tur in my_items:
+                delivery = _safe_get_dict(tur, 'delivery')
+                weight += _safe_get(delivery, 'totalLivingWeight')
+                price += _safe_get(delivery, 'totalPriceForFisher')
+                fuel += _safe_get(tur, 'fuelConsumption')
+                distance += _safe_get(tur, 'distance')
+        
+        
+        all_items = element[3]
+        for tur in all_items:
+            delivery = _safe_get_dict(tur, 'delivery')
+            av_Weight += _safe_get(delivery, 'totalLivingWeight')
+            av_Price += _safe_get(delivery, 'totalPriceForFisher')
+            #fuel += _safe_get(tur, 'fuelConsumption')
+            #distance += _safe_get(tur, 'distance')
+
+        av_Weight = av_Weight / len(gd.vesselRefIds)
+        av_Price = av_Price / len(gd.vesselRefIds)
+
+        myCatchArray.append(weight / 1000)
+        avCatchArray.append(av_Weight / 1000)
+        myCatchValueArray.append(price / 1000 / 1000)
+        avCatchValueArray.append(av_Price / 1000 / 1000)
+
+    gd.dataArray.append(myCatchArray)
+    gd.dataArray.append(avCatchArray)
+    gd.dataArray.append(myCatchValueArray)
+    gd.dataArray.append(avCatchValueArray)
+
+    print("myCatch array:", myCatchArray)
+    print("myCatchValue array:", myCatchValueArray)
+    print("avCatch array:", avCatchArray)
+    print("avCatchValue array:", avCatchValueArray)
+
+    span = monthsBetweenQdates(startDateList[0], endDateList[0])
+
+    title = (
+        "KPI-05: Fangst [Tonn] aggregert over {months} måneder\n"
+        "Lengde: {vGroup}, Redskap: {gGroup}"
+    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
+    plot(endDateList, myCatchArray, avCatchArray, title,
+         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
+         fName=toPngFile)
+
+    title = (
+        "KPI-05: Fangstverdi [mill. NOK] aggregert over {months} måneder\n"
+        "Lengde: {vGroup}, Redskap: {gGroup}"
+    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
+    plot(endDateList, myCatchValueArray, avCatchValueArray, title,
+         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
+         fName=toPngFile05_1)'''
 
 # ---------------------------------------------------------------------
 # Utilities (pagination, main species), now using the client per call
 # ---------------------------------------------------------------------
-def getTotalVessels(endpoint: str, sDate: QDate, eDate: QDate,
+def getAllTripsInPeriod(endpoint: str, sDate: QDate, eDate: QDate,
                     lengthG: List[str], gearG: List[str], specG: List[str], locG: List[str]) -> int:
     page_size = 100
     offset = 0
@@ -343,6 +499,7 @@ def getTotalVessels(endpoint: str, sDate: QDate, eDate: QDate,
             sDate=sDate, eDate=eDate,
             vesselGroups=lengthG, gearGroups=gearG,
             speciesGroups=specG, locationGroups=locG,
+            #vesselId = gd.vesselId,
             limit=page_size, offset=offset,
         )
 
@@ -356,6 +513,100 @@ def getTotalVessels(endpoint: str, sDate: QDate, eDate: QDate,
 
     print("Antall turer funnet:", len(all_items))
     return noVessels(all_items)
+
+
+# ---------------------------------------------------------------------
+#   getAllDatesInPeriod(endpoint, gd)
+#
+#   This function will calculate the time periods, and for each period
+#   download all my trips and all trips for the reference group.
+#   Output is an array with elements for each time period. 
+#   Each time period element is an array including startDate, endDate,
+#   myTrips dictionary and refGroupTrips dictionary
+# ---------------------------------------------------------------------
+
+def __getAllTripsInPeriod(endpoint: str, gd: List[Dict[str, Any]]) -> None:
+    page_size = 100
+
+    getDatesArray(gd)
+    startDateList, endDateList = gd.datesArray
+    returnElement = []
+
+    for sDate, eDate in zip(startDateList, endDateList):
+         ##############################################
+        # Collect data from all my trips in the period
+        ##############################################   
+        offset = 0
+        my_items: List[Dict[str, Any]] = []
+        
+        while True:
+            client = _new_client()
+            page = client.get(
+                E_TRIPS, sDate=sDate, eDate=eDate,
+                vesselGroups=gd.lengthG, gearGroups=gd.gearG,
+                speciesGroups=gd.specG, locationGroups=gd.locG,
+                vesselId = gd.vesselId, limit = page_size, offset = offset
+            ) or {}
+            
+            if not page or not isinstance(page, list):
+                break
+
+            my_items.extend(page)
+            if len(page) < page_size:
+                break
+            offset += page_size
+
+        '''for tur in my_items:
+                delivery = _safe_get_dict(tur, 'delivery')
+                weight += _safe_get(delivery, 'totalLivingWeight')
+                price += _safe_get(delivery, 'totalPriceForFisher')
+                fuel += _safe_get(tur, 'fuelConsumption')
+                distance += _safe_get(tur, 'distance')'''
+        
+        #####################################################################
+        # Collect data from trips in the reference group in the period
+        #####################################################################
+        offset = 0
+        all_items: List[Dict[str, Any]] = []
+
+        while True:
+            client = _new_client()
+            page = client.get(
+                E_TRIPS, sDate=sDate, eDate=eDate,
+                vesselGroups=gd.lengthG, gearGroups=gd.gearG,
+                speciesGroups=gd.specG, locationGroups=gd.locG,
+                vesselId = gd.vesselRefIds,  # reference group
+                limit = page_size, offset = offset
+            ) or {}
+
+            if not page or not isinstance(page, list):
+                break
+
+            all_items.extend(page)
+            if len(page) < page_size:
+                break
+            offset += page_size
+
+        '''for tur in all_items:
+            delivery = _safe_get_dict(tur, 'delivery')
+            av_Weight += _safe_get(delivery, 'totalLivingWeight')
+            av_Price += _safe_get(delivery, 'totalPriceForFisher')
+            #fuel += _safe_get(tur, 'fuelConsumption')
+            #distance += _safe_get(tur, 'distance')
+
+        av_Weight = av_Weight / len(gd.vesselRefIds)
+        av_Price = av_Price / len(gd.vesselRefIds)'''
+
+        '''myCatchArray.append(weight / 1000)
+        avCatchArray.append(av_Weight / 1000)
+        myCatchValueArray.append(price / 1000 / 1000)
+        avCatchValueArray.append(av_Price / 1000 / 1000)'''
+
+        returnElement.append([sDate, eDate, my_items, all_items])
+    
+    return noVessels(all_items), returnElement
+
+
 
 def getMainSpecie(endpoint: str, sDate: QDate, eDate: QDate,
                   lengthG: List[str], gearG: List[str], specG: List[str], locG: List[str]) -> Optional[str]:
