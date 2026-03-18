@@ -10,10 +10,12 @@ from PySide6.QtCore import QSize, QDate
 from gui_helpers import *
 from reports import *
 #import reports as r
-from KPI import kpi_01, kpi_02, kpi_03_04, kpi_05, getAllTripsInPeriod
+from KPI import kpi_01, kpi_02, kpi_03_04, kpi_05, getAllTripsInPeriod, getAllTripsInPeriods
 
 from datafangst_client import DatafangstClient
 from utility import *
+from dataclasses import dataclass
+
 
 # -------------------------
 # Vessel IDs
@@ -90,6 +92,10 @@ def safe_int(text: str, default: int = 0) -> int:
         return int(text)
     except Exception:
         return default
+    
+def _norsk_length_group(lengthG) -> str:
+    """Format Norwegian vessel length group label."""
+    return f"[{', '.join(nlg(lg) for lg in lengthG) if lengthG else 'Alle'}]"
 
 
 class MainWindow(QMainWindow):
@@ -108,6 +114,10 @@ class MainWindow(QMainWindow):
         self.myTrips = None
         self.refTrips = None
 
+        self.periodArray = []
+        self.tripsArray = []
+
+        
         # Shared client (fast & clean)
         self.client = DatafangstClient()
 
@@ -354,6 +364,7 @@ class MainWindow(QMainWindow):
         pef_action.triggered.connect(self.pef_button_clicked)
         pef_menu.addAction(pef_action)
 
+
     class kpi_data():
         def __init__(self, endDate: QDate, vesselId: int, vesselRefIds: list[int],
                  lengthgroup: list[str], gear: list[str], specie: list[str],
@@ -368,8 +379,6 @@ class MainWindow(QMainWindow):
             self.locG = location
             self.span = span
             self.noPeriods = periods
-            self.dataArray = []     #create emty arry to be filled in by kpi measurements
-            self.nVessels = 0
 
 
     # -------------------------
@@ -650,6 +659,7 @@ class MainWindow(QMainWindow):
         toPdfFile = "output/kpi_01-Report.pdf"
         toPngFile = "output/kpi01"
 
+        #Collect a copy of the gui data to be used in the KPI01 calculations
         this_kpiData = self.kpi_data(
             self.stopDateEdit.date(),
             self.vesselId,
@@ -662,30 +672,34 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(this_kpiData)
+        if self.isInputChanged():
+            self.periodArray = getPeriodDates(this_kpiData)
+            self.nVessels, self.tripsArray = getAllTripsInPeriods(E_TRIPS, this_kpiData, self.periodArray)
+            self.setInputChanged(False)
 
-        if (self.vesselRefIds == None) or (self.vesselRefIds == []):          
-            if self.isInputChanged():
-                startDateList, endDateList = this_kpiData.datesArray
-                if endDateList:
-                    self.nVessels = getAllTripsInPeriod(
-                        E_TRIPS,
-                        startDateList[0], endDateList[-1],
-                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
-                    )
-                self.setInputChanged(False)
-        else:
-            self.nVessels = len(self.vesselRefIds)
+        
+        kpi01_results = kpi_01(this_kpiData, self.tripsArray)
 
-        this_kpiData.nVessels = self.nVessels
+        span = this_kpiData.span
+        endDateList = []
+        for i in self.periodArray:
+            endDateList.append(i[1])
 
-        kpi_01(this_kpiData, toPngFile)
+        norskLgroup = _norsk_length_group(this_kpiData.lengthG)
+        title = ( "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\n"
+                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        plot(endDateList, kpi01_results["myEeoiList"], kpi01_results["refEeoiList"], title,
+            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile)
+
         createPdfDoc(toPdfFile, toPngFile + ".png")
 
+        jsonKeys = ["EEOI", "refEEOI"]
+
         if toCsvFile:
-            jsonArray = [createJsonItem(this_kpiData)]
-            createJson(jsonArray, toJsonFile)
-            json_to_csv(jsonArray[0], toCsvFile)
+            jsonDict = createJsonItem(this_kpiData, self.nVessels, self.periodArray, kpi01_results)
+            createJson(jsonDict, toJsonFile)
+            json_to_csv(jsonDict, toCsvFile)
 
     def kpi02_button_clicked(self):
         toPngFile = "output/kpi02"
@@ -705,31 +719,35 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(this_kpiData)
+        if self.isInputChanged():
+            self.periodArray = getPeriodDates(this_kpiData)
+            self.nVessels, self.tripsArray = getAllTripsInPeriods(E_TRIPS, this_kpiData, self.periodArray)
+            self.setInputChanged(False)
+ 
+        kpi02_results = kpi_02(this_kpiData, self.tripsArray)
 
-        if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
-            if self.isInputChanged():
-                startDateList, endDateList = this_kpiData.datesArray
-                if endDateList:
-                    self.nVessels = getAllTripsInPeriod(
-                        E_TRIPS,
-                        startDateList[0], endDateList[-1],
-                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
-                    )
-                self.setInputChanged(False)
-        else:
-            self.nVessels = len(self.vesselRefIds)
+        span = this_kpiData.span
+        endDateList = []
+        for i in self.periodArray:
+            endDateList.append(i[1])
 
-        this_kpiData.nVessels = self.nVessels
-        kpi_02(this_kpiData, toPngFile)
+        norskLgroup = _norsk_length_group(this_kpiData.lengthG)
+        title = ( "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\n"
+                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        plot(endDateList, kpi02_results["myFuiList"], kpi02_results["refFuiList"], title,
+            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile)
+
         createPdfDoc(toPdfFile, toPngFile + ".png")
 
         if toCsvFile:
-            jsonArray = [createJsonItem(this_kpiData)]
-            createJson(jsonArray, toJsonFile)
-            json_to_csv(jsonArray[0], toCsvFile)
+            jsonDict = createJsonItem(this_kpiData, self.nVessels, self.periodArray, kpi02_results)
+            createJson(jsonDict, toJsonFile)
+            json_to_csv(jsonDict, toCsvFile)
 
     def kpi03_04_button_clicked(self):
+        toPngFile03 = "output/kpi03"
+        toPngFile04 = "output/kpi04"
         toCsvFile = "output/kpi-03_04-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_03_04-Report.json"
         toPdfFile = "output/kpi_03_04-Report.pdf"
@@ -746,35 +764,46 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(this_kpiData)
+        if self.isInputChanged():
+            self.periodArray = getPeriodDates(this_kpiData)
+            self.nVessels, self.tripsArray = getAllTripsInPeriods(E_TRIPS, this_kpiData, self.periodArray)
+            self.setInputChanged(False)
 
-        if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
-            if self.isInputChanged():
-                startDateList, endDateList = this_kpiData.datesArray
-                if endDateList:
-                    self.nVessels = getAllTripsInPeriod(
-                        E_TRIPS,
-                        startDateList[0], endDateList[-1],
-                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
-                    )
-                self.setInputChanged(False)
-        else:
-            self.nVessels = len(self.vesselRefIds)
+        kpi03_04_results = kpi_03_04(this_kpiData, self.periodArray, self.nVessels)
 
-        this_kpiData.nVessels = self.nVessels
-        kpi_03_04(this_kpiData)
+        span = this_kpiData.span
+        endDateList = []
+        for i in self.periodArray:
+            endDateList.append(i[1])
+
+        norskLgroup = _norsk_length_group(this_kpiData.lengthG)
+        title = ("KPI-03: Rev. per Ton [NOK / Tonn] aggregert over {months} måneder\n"
+                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        plot(endDateList, kpi03_04_results["myRevPerTonWeightArray"], kpi03_04_results["avRevPerTonWeightArray"], title,
+            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile03)
+
+
+        title = ("KPI-04: Rev. per Hour [NOK / time] aggregert over {months} måneder\n"
+                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+        
+        plot(endDateList, kpi03_04_results["myRevPerHourArray"], kpi03_04_results["avRevPerHourArray"], title,
+            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile04)
 
         if toCsvFile:
-            jsonArray = [createJsonItem(this_kpiData)]
-            createJson(jsonArray, toJsonFile)
-            json_to_csv(jsonArray[0], toCsvFile)
+            jsonDict = createJsonItem(this_kpiData, self.nVessels, self.periodArray, kpi03_04_results)
+            createJson(jsonDict, toJsonFile)
+            json_to_csv(jsonDict, toCsvFile)
+
 
     def kpi05_button_clicked(self):
-        toPngFile = "output/kpi05"
+        toPngFile5 = "output/kpi05"
+        toPngFile6 = "output/kpi06"
         toCsvFile = "output/kpi-05-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_05-Report.json"
         toPdfFile = "output/kpi_05-Report.pdf"
 
+        #Collect a copy of the gui data to be used in the KPI05 calculations
         this_kpiData = self.kpi_data(
             self.stopDateEdit.date(),
             self.vesselId,
@@ -787,34 +816,55 @@ class MainWindow(QMainWindow):
             int(self.resEdit.text())
         )
 
-        getDatesArray(this_kpiData)
+        
+        if self.isInputChanged():
+            self.periodArray = getPeriodDates(this_kpiData)
+            self.nVessels, self.tripsArray = getAllTripsInPeriods(E_TRIPS, this_kpiData, self.periodArray)
+            self.setInputChanged(False)
 
-        if (self.vesselRefIds == None) or (self.vesselRefIds == []):  
-            if self.isInputChanged():
-                startDateList, endDateList = this_kpiData.datesArray
-                if endDateList:
-                    self.nVessels, retArray = getAllTripsInPeriod(
-                        E_TRIPS,
-                        startDateList[0], endDateList[-1],
-                        this_kpiData.lengthG, this_kpiData.gearG, this_kpiData.specG, this_kpiData.locG
-                    )
-                self.setInputChanged(False)
-        else:
-            self.nVessels = len(self.vesselRefIds)
+        
+        kpi05_results = kpi_05(this_kpiData, self.tripsArray)
+        # create plots of the results
 
-        this_kpiData.nVessels = self.nVessels
-        kpi_05(this_kpiData, toPngFile)
-        #kpi_05(self.nVessels, retArray, toPngFile)
+        span = this_kpiData.span
+        endDateList = []
+        for i in self.periodArray:
+            endDateList.append(i[1])
+
+        norskLgroup = _norsk_length_group(this_kpiData.lengthG)
+        title = ("KPI-05: Fangst [Tonn] aggregert over {months} måneder\n"
+                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        plot(endDateList, kpi05_results["myCatchList"], kpi05_results["refCatchList"], title,
+            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile5)
+
+        toPngFile = "output/kpi05_1"
+        title = ("KPI-05: Fangstverdi [mill. NOK] aggregert over {months} måneder\n"
+                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+        
+        plot(endDateList, kpi05_results["myCatchValueList"], kpi05_results["refCatchValueList"], title,
+            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile)
+        
+        title = ("KPI-06: Drivstofforbruk [liter] aggregert over {months} måneder\n"
+                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        plot(endDateList, kpi05_results["myFuelList"], kpi05_results["refFuelList"], title,
+            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile6)
+
 
         createPdfDoc(toPdfFile, toPngFile + ".png")
 
         if toCsvFile:
-            jsonArray = [createJsonItem(this_kpiData)]
-            createJson(jsonArray, toJsonFile)
-            json_to_csv(jsonArray[0], toCsvFile)
+            jsonDict = createJsonItem(this_kpiData, self.nVessels, self.periodArray, kpi05_results)
+            createJson(jsonDict, toJsonFile)
+            json_to_csv(jsonDict, toCsvFile)
+
+
 
     # -------------------------
     # Window close
     # -------------------------
     def closeEvent(self, event):
         self.close()
+
+

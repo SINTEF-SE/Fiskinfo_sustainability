@@ -11,130 +11,137 @@ import pdfExt
 
 
 
-def createJsonItem(kpi_data):
-        data = {}
-        data['vesselName'] =kpi_data.vesselId
-        data['callSign'] = ""
-        data['numberOfRefVessels'] = kpi_data.nVessels
-        data['group'] = kpi_data.lengthG
-        data['gear'] = kpi_data.gearG
-        data['specie'] = kpi_data.specG
-        data['aggregatedMonths'] = kpi_data.span
-        data['NumberOfPeriods'] = kpi_data.noPeriods
 
-        dataSetName = []        # array with names of dataset
-        for array in kpi_data.dataArray:
-            dataSetName.append(array[0])
-            array.pop(0)        # remove first item from array
+def createJsonItem(kpi_data, nVessels, periodArray, dataDict):
+        
+    """
+    Creates a JSON‑ready dictionary containing vessel info and KPI values.
 
-        noItems = len(kpi_data.dataArray)
-        itemIndex = list(range(0, noItems))             # list of item indexes
-        noDataPoints = len(kpi_data.dataArray[0])       
-        pointsIndex = list(range(0, noDataPoints))      # list of dataPoint indexes
+    - Extracts dataset names from dataDict (first element of each list)
+    - Matches KPI values to each period in periodArray
+    - Builds a list of rows, each with startDate, endDate, and KPI values
 
-        jsonArray = []
-        startDates= kpi_data.datesArray[0]
-        endDates= kpi_data.datesArray[1]
-        for pIx in pointsIndex:
-            jsonLine = {'startDate': startDates[pIx].toString('dd-MM-yyyy'), 'endDate':  endDates[pIx].toString('dd-MM-yyyy')}
-            for iIx in itemIndex:
-                jsonLine[dataSetName[iIx]] = kpi_data.dataArray[iIx][pIx]
+    Returns a dictionary with vessel metadata and a 'dataArray' list of rows.
+    """
 
-            jsonArray.append(jsonLine)
+    # ---- Static vessel metadata ----
+    data = {
+        "vesselName": kpi_data.vesselId,
+        "callSign": "",
+        "numberOfRefVessels": nVessels,
+        "group": kpi_data.lengthG,
+        "gear": kpi_data.gearG,
+        "specie": kpi_data.specG,
+        "aggregatedMonths": kpi_data.span,
+        "NumberOfPeriods": kpi_data.noPeriods,
+    }
 
-        data['dataArray'] = jsonArray
+    dataset_names = []
+    cleaned_data = {}
 
-        return data
+    for key, arr in dataDict.items():
+        dataset_names.append(arr[0])     # first element is the dataset name
+        cleaned_data[key] = arr[1:]      # values only
+
+    # ---- Index arrays ----
+    keys = list(cleaned_data.keys())
+    num_points = len(cleaned_data[keys[0]])
+            
+    # ---- Construct json data rows ----
+    jsonArray = []
+    for idx in range(num_points):
+        startDate = periodArray[idx][0].toString('dd-MM-yyyy')
+        endDate   = periodArray[idx][1].toString('dd-MM-yyyy')
+
+        row = {
+            "startDate": startDate,
+            "endDate": endDate
+        }
+
+        for i, key in enumerate(keys):
+            dataset_name = dataset_names[i]
+            row[dataset_name] = cleaned_data[key][idx]
+
+        jsonArray.append(row)
+
+    data["dataArray"] = jsonArray
+
+    return data
 
 
-def createJson(data, jsonFile):
+
+def createJson(data, jsonFile):   
+    """
+    Writes the given data to a JSON file and also returns the JSON string.
+
+    - Saves 'data' to the file path given by jsonFile (UTF‑8, pretty‑printed)
+    - Returns the same data as a JSON string
+
+    Useful when you need both a saved JSON file and the JSON content in memory.
+    """
     
     json_data = json.dumps(data)
-    #print(f"Content (JSON): {json_data}")
-
     with open(jsonFile, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     
     return json_data
 
-
-def createCsv(data, csvFile):
-    #csvf = open(csvFile, 'w')
-    #cw = csv.writer(csvf)
-    #json_data = json.dumps(data)
-    #print(f"Content (JSON): {json_data}")
-
-    with open(csvFile, 'w', newline = '') as csvfile:
-        cw = csv.writer(csvfile)
-        cw.writerows(data)
-        
-#def json_to_pandas_csv(json_data: Dict[Any, Any], output_file: str, flatten: bool = True) -> None:
-    """
-    Convert JSON response to CSV file using pandas DataFrame
-
-    Args:
-        json_data: JSON response data as dictionary
-        output_file: Output CSV file path/name
-        flatten: Whether to flatten nested JSON structures (default: True)
-    """
-    ''' try:
-        # Convert JSON to DataFrame
-        df = pd.json_normalize(json_data) if flatten else pd.DataFrame(json_data)
-        
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-        # Write to CSV, handle encoding for Norwegian characters
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
-        print(f"CSV file saved: {output_file}")
-
-    except Exception as e:
-        print(f"Error writing CSV file: {str(e)}")
-        print("end")'''
-
     
+
 def getKeys(jsonData):
-   # data = json.loads(jsonData)
+    """
+    Extracts the top‑level keys and the dataArray keys from a JSON‑like dict.
 
-    # Get all keys
+    Returns:
+        keys1 : keys from the main metadata section
+        keys2 : keys from the first row in dataArray
+        dArr  : the full dataArray list
+    """
     dArr = jsonData['dataArray']
+    jsonData = jsonData.copy()      # avoid mutating caller's data
     jsonData.pop('dataArray')
-    keys1 = jsonData.keys()      #keys linje 1
-    keys2 = dArr[0].keys()   #keys linje 2
-        
-    
-   # print(list(keys)) 
+
+    keys1 = jsonData.keys()
+    keys2 = dArr[0].keys()
+
     return keys1, keys2, dArr
 
-    
-def json_to_csv(jsonData, toCsvFile):
+
+
+def json_to_csv(jsonData, toCsvFile): 
+    """
+    Writes JSON‑style KPI data to a CSV file.
+
+    - Writes top‑level metadata
+    - Writes column headers for the KPI table
+    - Writes each row from dataArray
+
+    Saves the CSV to the given file path.
+    """
+
     keys1, keys2, dataArray = getKeys(jsonData)
-    
+
     try:
-        with open(toCsvFile, "w") as f:
-            for key in keys1:
-                print(key, ',', end='', file = f)
-            print(file=f)
+        with open(toCsvFile, "w", encoding="utf-8") as f:
 
-            for key in keys1:
-                val = jsonData[key]       
-                print(val,',', end='', file = f)   
-            print(file=f)
-            print(file=f)
-            
-            for key in keys2:
-                print(key,',', end='', file = f)
-            print(file=f)
+            # Write main metadata keys
+            print(",".join(keys1), file=f)
+            print(",".join(str(jsonData[k]) for k in keys1), file=f)
+            print("", file=f)  # blank line
 
+            # Write table header
+            print(",".join(keys2), file=f)
+
+            # Write table rows
             for item in dataArray:
-                for key in keys2:
-                    val = item[key]
-                    print(val,',', end='', file = f)
-                print(file=f)
+                row = ",".join(str(item[k]) for k in keys2)
+                print(row, file=f)
+
         logging.info(f"CSV file saved: {toCsvFile}")
 
     except Exception as e:
         logging.error(f"Error writing CSV file: {str(e)}")
+
 
 
  #----------------------- PDF Report-------------------------------------------------------

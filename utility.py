@@ -52,6 +52,35 @@ def getDatesArray(gd):
         gd.datesArray = dateArray
 
 
+
+def getPeriodDates(gd):
+        
+        """
+        Creates a list of date periods based on a given end date, the number of
+        months in each period (gd.span), and the number of periods (gd.noPeriods).
+
+        For each period:
+        - The end date is set to the last day of the target month.
+        - The start date is set to the first day of the month (span - 1) months earlier.
+        - The period is stored as a tuple: (startDate, endDate)
+
+        The final list is saved in gd.periodArray.
+        """
+
+        periodArray = []
+
+        for m in reversed(range(0,gd.noPeriods)):
+                endDate = gd.endDate.addMonths(-m*gd.span)
+                days = endDate.daysInMonth()
+                endDate.setDate(endDate.year(), endDate.month(), days)
+                startDate = endDate.addMonths(-(gd.span-1))
+                startDate.setDate(startDate.year(), startDate.month(), 1)
+                newDate = (startDate, endDate)
+                periodArray.append(newDate)
+
+        return periodArray
+
+
 def monthsBetweenQdates(start_date, end_date) -> int:
     """
     Calculates the number of calendar months between two QDate objects.

@@ -3,6 +3,8 @@
 from typing import List, Optional, Any, Dict, Mapping, MutableMapping, Iterable, Tuple
 import json
 from collections import Counter
+import re
+import datetime
 
 from PySide6.QtCore import QDate
 from datafangst_client import DatafangstClient
@@ -24,6 +26,8 @@ SSB_PRICE_BASE = (
     "?lang=no&valueCodes[PetroleumProd]=035&valueCodes[ContentsCode]=Priser&valueCodes[Tid]="
 )
 
+CO2_FACTOR = 2.66           # kg CO2 / liter drivstoff
+
 # ---------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------
@@ -39,6 +43,13 @@ def _safe_get(d: Dict[str, Any], key: str, default: float = 0.0) -> float:
     """Get numeric key safely from dict, coercing to float."""
     try:
         return float(d.get(key, default))
+    except Exception:
+        return default
+    
+def _safe_get_string(d: Dict[str, Any], key: str, default: str = '') -> str:
+    """Get numeric key safely from dict, coercing to float."""
+    try:
+        return str(d.get(key, default))
     except Exception:
         return default
     
@@ -92,31 +103,41 @@ def _ssb_price_url(start: QDate, end: QDate) -> str:
 # ---------------------------------------------------------------------
 # KPI-01: EEOI
 # ---------------------------------------------------------------------
-def kpi_01(gd, toPngFile: str):
-    """EEOI [g CO2 /(fangst*nm)] aggregated over sliding windows."""
+'''
+def kpi_01(gd: List[Dict[str, Any]], periodArray: List[Dict[str, Any]], nVessels: int) -> List[Dict[str, Any]]: 
+    """
+        Calculates EEOI (Energy Efficiency Operational Indicator) for each
+        time period in periodArray.
+
+        For every (startDate, endDate) tuple:
+        - Retrieves EEOI for the main vessel (gd.vesselId)
+        - Retrieves average EEOI for the reference vessels (gd.vesselRefIds)
+
+        Values are returned in grams CO2 per (catch * nautical mile),
+        scaled from kg to grams (×1000).
+
+        Returns a dictionary containing:
+        - myEeoiArray: EEOI values for the main vessel
+        - avEeoiArray: Average EEOI values for the reference group
+        """
+
     client = _new_client()
 
-    norskLgroup = _norsk_length_group(gd.lengthG)
-    startDateList, endDateList = gd.datesArray
-    if not startDateList or not endDateList:
-        print("kpi_01: No dates provided.")
-        return
-
+    # JSON keys
     myEeoiArray = ['EEOI']
-    avEeoiArray = ['Gj.snitt EEOI']
+    avEeoiArray = ['avEEOI']
 
-    for sDate, eDate in zip(startDateList, endDateList):
+    for dateTuple in periodArray:
         my_val = client.get(
             E_AV_EEOI,
-            sDate=sDate, eDate=eDate,
+            sDate=dateTuple[0], eDate=dateTuple[1],
             vesselGroups=gd.lengthG, gearGroups=gd.gearG,
             speciesGroups=gd.specG, locationGroups=gd.locG,
-            #vesselId=getattr(gd, "fiskdirId", None),  # if present
             vesselId = gd.vesselId,
         )
         av_val = client.get(
             E_AV_EEOI,
-            sDate=sDate, eDate=eDate,
+            sDate=dateTuple[0], eDate=dateTuple[1],
             vesselGroups=gd.lengthG, gearGroups=gd.gearG,
             speciesGroups=gd.specG, locationGroups=gd.locG,
             vesselId=gd.vesselRefIds,  # reference group
@@ -126,101 +147,194 @@ def kpi_01(gd, toPngFile: str):
         myEeoiArray.append(1000.0 * float(my_val or 0))
         avEeoiArray.append(1000.0 * float(av_val or 0))
 
-    gd.dataArray.append(myEeoiArray)
-    gd.dataArray.append(avEeoiArray)
+    resultArray = {"myEeoiArray": myEeoiArray}
+    resultArray.update({"avEeoiArray": avEeoiArray})
 
-    print("myEeoi array:", myEeoiArray)
-    print("AvEeoi array:", avEeoiArray)
+    return resultArray'''
 
-    span = monthsBetweenQdates(startDateList[0], endDateList[0])
-    title = (
-        "KPI-01: EEOI [g CO2 /(fangst*nm)] aggregert over {months} måneder\n"
-        "Lengde: {vGroup}, Redskap: {gGroup}"
-    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
 
-    plot(endDateList, myEeoiArray, avEeoiArray, title,
-         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
-         fName=toPngFile)
+def kpi_01(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[Dict[str, Any]]: 
+    """
+        Calculates EEOI (Energy Efficiency Operational Indicator) for each
+        time period in periodArray.
+
+        For every (startDate, endDate) tuple:
+        - Retrieves EEOI for the main vessel (gd.vesselId)
+        - Retrieves average EEOI for the reference vessels (gd.vesselRefIds)
+
+        Values are returned in grams CO2 per (catch * nautical mile),
+        scaled from kg to grams (×1000).
+
+        Returns a dictionary containing:
+        - myEeoiArray: EEOI values for the main vessel
+        - avEeoiArray: Average EEOI values for the reference group
+        """
+
+    # JSON keys
+    myEeoiList = ['EEOI']
+    refEeoiList = ['refEEOI']
+    myFuiList = ['FUI']
+    refFuiList = ['refFUI']
+    
+    for trip in tripsArray:
+        sumFuel = 0
+        sumWeightXdistance = 0
+        sumWeight = 0
+        sumRefFuel = 0
+        sumRefWeightXdistance = 0
+        sumRefWeight = 0
+        
+        myTrip = trip[0]    
+        for tur in myTrip:
+            delivery = _safe_get_dict(tur, 'delivery')
+            tripFuel = _safe_get(tur, 'fuelConsumption') 
+            sumFuel += tripFuel                                        # Aggregate over all tours
+            tripWeight = _safe_get(delivery, 'totalLivingWeight')
+            sumWeight += tripWeight                                    # Aggregate over all tours
+            tripDistance = _safe_get(tur, 'distance')
+            sumWeightXdistance += tripWeight/1000*tripDistance/1852     # Aggregate over all tours
+                
+        eeoi = sumFuel*CO2_FACTOR/sumWeightXdistance*1000               #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
+        fui = sumFuel*CO2_FACTOR/sumWeight*1000                        #(kg CO2 / ton → g CO2 / ton)
+        
+        allTrips = trip[1]
+        for tur in allTrips:
+            delivery = _safe_get_dict(tur, 'delivery')
+            tripRefFuel = _safe_get(tur, 'fuelConsumption')
+            sumRefFuel += tripRefFuel                                   # Aggregate over all tours
+            tripRefWeight = _safe_get(delivery, 'totalLivingWeight')
+            sumRefWeight += tripRefWeight
+            tripRefDistance = _safe_get(tur, 'distance')
+            sumRefWeightXdistance += tripRefWeight/1000*tripRefDistance/1852        # Aggregate over all tours
+        
+        ref_eeoi = sumRefFuel*CO2_FACTOR/sumRefWeightXdistance*1000     #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
+        ref_fui = sumRefFuel*CO2_FACTOR/sumRefWeight*1000               #(kg CO2 / ton → g CO2 / ton)
+
+        myEeoiList.append(eeoi)                 
+        refEeoiList.append(ref_eeoi)
+        myFuiList.append(fui)     
+        refFuiList.append(ref_fui)          
+
+    # resultArray to be returned
+    resultDict = {"myEeoiList": myEeoiList}
+    resultDict.update({"refEeoiList": refEeoiList})
+    resultDict.update({"myFuiList": myFuiList})
+    resultDict.update({"refFuiList": refFuiList})
+
+    return resultDict
+
 
 # ---------------------------------------------------------------------
 # KPI-02: FUI
 # ---------------------------------------------------------------------
-def kpi_02(gd, toPngFile: str):
-    """FUI [g CO2 /fangst] aggregated over sliding windows."""
-    client = _new_client()
+def kpi_02(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    
+    """
+        Calculates FUI (Fuel Use Intensity) for each time period in periodArray.
 
-    norskLgroup = _norsk_length_group(gd.lengthG)
-    startDateList, endDateList = gd.datesArray
-    if not startDateList or not endDateList:
-        print("kpi_02: No dates provided.")
-        return
+        For every (startDate, endDate) tuple:
+        - Retrieves FUI for the main vessel (gd.vesselId)
+        - Retrieves average FUI for the reference vessels (gd.vesselRefIds)
 
-    myFuiArray = ['FUI']
-    avFuiArray = ['Gj.snitt FUI']
+        Values are converted from kg to grams (×1000).
 
-    for sDate, eDate in zip(startDateList, endDateList):
-        my_val = client.get(
-            E_AV_FUI,
-            sDate=sDate, eDate=eDate,
-            vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-            speciesGroups=gd.specG, locationGroups=gd.locG,
-            #vesselId=getattr(gd, "fiskdirId", None),
-            vesselId = gd.vesselId,
-        )
-        av_val = client.get(
-            E_AV_FUI,
-            sDate=sDate, eDate=eDate,
-            vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-            speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=gd.vesselRefIds,  # reference group
-        )
+        Returns a dictionary containing:
+        - myFuiArray: FUI values for the main vessel
+        - avFuiArray: Average FUI values for the reference group
+        """
 
-        myFuiArray.append(1000.0 * float(my_val or 0))
-        avFuiArray.append(1000.0 * float(av_val or 0))
+    # JSON keys
+    myEeoiList = ['EEOI']
+    refEeoiList = ['refEEOI']
+    myFuiList = ['FUI']
+    refFuiList = ['refFUI']
+    
+    for trip in tripsArray:
+        sumFuel = 0
+        sumWeightXdistance = 0
+        sumWeight = 0
+        sumRefFuel = 0
+        sumRefWeightXdistance = 0
+        sumRefWeight = 0
+        
+        myTrip = trip[0]    
+        for tur in myTrip:
+            delivery = _safe_get_dict(tur, 'delivery')
+            tripFuel = _safe_get(tur, 'fuelConsumption') 
+            sumFuel += tripFuel                                        # Aggregate over all tours
+            tripWeight = _safe_get(delivery, 'totalLivingWeight')
+            sumWeight += tripWeight                                    # Aggregate over all tours
+            tripDistance = _safe_get(tur, 'distance')
+            sumWeightXdistance += tripWeight/1000*tripDistance/1852     # Aggregate over all tours
+                
+        eeoi = sumFuel*CO2_FACTOR/sumWeightXdistance*1000               #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
+        fui = sumFuel*CO2_FACTOR/sumWeight*1000                        #(kg CO2 / ton → g CO2 / ton)
+        
+        allTrips = trip[1]
+        for tur in allTrips:
+            delivery = _safe_get_dict(tur, 'delivery')
+            tripRefFuel = _safe_get(tur, 'fuelConsumption')
+            sumRefFuel += tripRefFuel                                   # Aggregate over all tours
+            tripRefWeight = _safe_get(delivery, 'totalLivingWeight')
+            sumRefWeight += tripRefWeight
+            tripRefDistance = _safe_get(tur, 'distance')
+            sumRefWeightXdistance += tripRefWeight/1000*tripRefDistance/1852        # Aggregate over all tours
+        
+        ref_eeoi = sumRefFuel*CO2_FACTOR/sumRefWeightXdistance*1000     #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
+        ref_fui = sumRefFuel*CO2_FACTOR/sumRefWeight*1000               #(kg CO2 / ton → g CO2 / ton)
 
-    gd.dataArray.append(myFuiArray)
-    gd.dataArray.append(avFuiArray)
+        myEeoiList.append(eeoi)                 
+        refEeoiList.append(ref_eeoi)
+        myFuiList.append(fui)     
+        refFuiList.append(ref_fui)          
 
-    print("myFui array:", myFuiArray)
-    print("AvFui array:", avFuiArray)
+    # resultArray to be returned
+    resultDict = {"myEeoiList": myEeoiList}
+    resultDict.update({"refEeoiList": refEeoiList})
+    resultDict.update({"myFuiList": myFuiList})
+    resultDict.update({"refFuiList": refFuiList})
 
-    span = monthsBetweenQdates(startDateList[0], endDateList[0])
-    title = (
-        "KPI-02: FUI [g CO2 /fangst] aggregert over {months} måneder\n"
-        "Lengde: {vGroup}, Redskap: {gGroup}"
-    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
-
-    plot(endDateList, myFuiArray, avFuiArray, title,
-         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
-         fName=toPngFile)
+    return resultDict
 
 # ---------------------------------------------------------------------
 # KPI-03 and KPI-04: Revenue per ton & per hour (net, price-adjusted)
 # ---------------------------------------------------------------------
-def kpi_03_04(gd):
-    """Compute and plot:
-       KPI-03: Netto fortjeneste per tonn fisk [NOK/tonn] ((fangstverdi - drivstoffkostnad) / tonn fangst)
-       KPI-04: Netto fortjeneste per time [NOK/time]      ((fangstverdi - drivstoffkostnad) / timer)
+def kpi_03_04(gd: List[Dict[str, Any]], periodArray: List[Dict[str, Any]], nVessels: int) -> List[Dict[str, Any]]:
+    
     """
+        Calculates two KPIs for each (startDate, endDate) in periodArray:
+
+        KPI‑03: Netto fortjeneste per tonn fisk [NOK/tonn]
+                = (fangstverdi − drivstoffkostnad) / fangst (kg→tonn)
+
+        KPI‑04: Netto fortjeneste per time [NOK/time]
+                = (fangstverdi − drivstoffkostnad) / timer
+
+        For each period:
+        - Retrieves average metrics for the main vessel (gd.vesselId) and the reference group (gd.vesselRefIds)
+        - Uses SSB price for the month of sDate (adjusted by PRICE_DIFF)
+        - Computes NOK/tonn (by scaling kg → tonn with ×1000) and NOK/time
+
+        Returns a dictionary with four arrays:
+        - myRevPerTonWeightArray      : main vessel, NOK/tonn
+        - avRevPerTonWeightArray      : reference group, NOK/tonn
+        - myRevPerHourArray           : main vessel, NOK/time
+        - avRevPerHourArray           : reference group, NOK/time
+        """
+
     df_client = _new_client()
     ssb_client = _new_client()  # used only for request(); auth=False
 
-    toPngFile03 = "output/kpi03"
-    toPngFile04 = "output/kpi04"
+    # JSON keys
+    myRevPerTonWeightArray = ['NetRevenuePerTon']
+    avRevPerTonWeightArray = ['avNetRevenuePerTon']
+    myRevPerHourArray = ['NetRevenuePerHour']
+    avRevPerHourArray = ['avNetRevenuePerHour']
 
-    norskLgroup = _norsk_length_group(gd.lengthG)
-    startDateList, endDateList = gd.datesArray
-    if not startDateList or not endDateList:
-        print("kpi_03_04: No dates provided.")
-        return
-
-    myRevPerTonWeightArray = ['Netto fortjeneste per tonn fisk [NOK]']
-    avRevPerTonWeightArray = ['Gj.snitt Netto fortjeneste per tonn fisk [NOK]']
-    myRevPerHourArray = ['Netto fortjeneste per time [NOK])']
-    avRevPerHourArray = ['Gj.snitt Netto fortjeneste per time [NOK]']
-
-    for sDate, eDate in zip(startDateList, endDateList):
+    for dateTuple in periodArray:
         # SSB price for the month of sDate
+        sDate=dateTuple[0]
+        eDate=dateTuple[1]
         ssb_url = _ssb_price_url(sDate, sDate)
         ssb = ssb_client.request(endpoint=ssb_url, auth=False) or {}
         price_values = ssb.get('value') if isinstance(ssb, dict) else None
@@ -261,227 +375,117 @@ def kpi_03_04(gd):
         myRevPerHourArray.append(my_rev_per_hour)
         avRevPerHourArray.append(av_rev_per_hour)
 
-    gd.dataArray.append(myRevPerTonWeightArray)
-    gd.dataArray.append(avRevPerTonWeightArray)
-    gd.dataArray.append(myRevPerHourArray)
-    gd.dataArray.append(avRevPerHourArray)
+    resultArray = {"myRevPerTonWeightArray": myRevPerTonWeightArray}
+    resultArray.update({"avRevPerTonWeightArray": avRevPerTonWeightArray})
+    resultArray.update({"myRevPerHourArray": myRevPerHourArray})
+    resultArray.update({"avRevPerHourArray": avRevPerHourArray})
 
-    span = monthsBetweenQdates(startDateList[0], endDateList[0])
+    return resultArray
 
-    title = (
-        "KPI-03: Rev. per Ton [NOK / Tonn] aggregert over {months} måneder\n"
-        "Lengde: {vGroup}, Redskap: {gGroup}"
-    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
-    plot(endDateList, myRevPerTonWeightArray, avRevPerTonWeightArray, title,
-         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
-         fName=toPngFile03)
-
-    title = (
-        "KPI-04: Rev. per Hour [NOK / time] aggregert over {months} måneder\n"
-        "Lengde: {vGroup}, Redskap: {gGroup}"
-    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
-    plot(endDateList, myRevPerHourArray, avRevPerHourArray, title,
-         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
-         fName=toPngFile04)
 
 # ---------------------------------------------------------------------
 # KPI-05: Annual catch and catch value
 # ---------------------------------------------------------------------
-def kpi_05(gd, toPngFile: str):
-    """KPI-05: Årlig fangst [Tonn/År] og fangstverdi [mill. NOK/År]."""
-    #client = _new_client()
-    toPngFile05_1 = "output/kpi05_1"
-
-    norskLgroup = _norsk_length_group(gd.lengthG)
-    startDateList, endDateList = gd.datesArray
-    if not startDateList or not endDateList:
-        print("kpi_05: No dates provided.")
-        return
-
-    myCatchArray = ['Fangst [tonn]']
-    myCatchValueArray = ['Fangstverdi [mill. NOK]']
-    avCatchArray = ['Gj.snitt fangst [tonn]']
-    avCatchValueArray = ['Gj.snitt fangstverdi [mill. NOK]']
-
-    page_size = 100
-
-    for sDate, eDate in zip(startDateList, endDateList):
-        ##############################################
-        # Collect data from all my trips in the period
-        ##############################################
-        weight = 0
-        price = 0
-        fuel = 0
-        distance = 0    
-        offset = 0
-        my_items: List[Dict[str, Any]] = []
-        
-        while True:
-            client = _new_client()
-            page = client.get(
-                E_TRIPS, sDate=sDate, eDate=eDate,
-                vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-                speciesGroups=gd.specG, locationGroups=gd.locG,
-                vesselId = gd.vesselId, limit = page_size, offset = offset
-            ) or {}
-            
-            if not page or not isinstance(page, list):
-                break
-
-            my_items.extend(page)
-            if len(page) < page_size:
-                break
-            offset += page_size
-            
-        for tur in my_items:
-                delivery = _safe_get_dict(tur, 'delivery')
-                weight += _safe_get(delivery, 'totalLivingWeight')
-                price += _safe_get(delivery, 'totalPriceForFisher')
-                fuel += _safe_get(tur, 'fuelConsumption')
-                distance += _safe_get(tur, 'distance')
-        
-        #####################################################################
-        # Collect data from trips in the reference group in the period
-        #####################################################################
-        av_Weight = 0
-        av_Price = 0
-        offset = 0
-        all_items: List[Dict[str, Any]] = []
-
-        while True:
-            client = _new_client()
-            page = client.get(
-                E_TRIPS, sDate=sDate, eDate=eDate,
-                vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-                speciesGroups=gd.specG, locationGroups=gd.locG,
-                vesselId = gd.vesselRefIds,  # reference group
-                limit = page_size, offset = offset
-            ) or {}
-
-            if not page or not isinstance(page, list):
-                break
-
-            all_items.extend(page)
-            if len(page) < page_size:
-                break
-            offset += page_size
-
-        for tur in all_items:
-            delivery = _safe_get_dict(tur, 'delivery')
-            av_Weight += _safe_get(delivery, 'totalLivingWeight')
-            av_Price += _safe_get(delivery, 'totalPriceForFisher')
-            #fuel += _safe_get(tur, 'fuelConsumption')
-            #distance += _safe_get(tur, 'distance')
-
-        av_Weight = av_Weight / len(gd.vesselRefIds)
-        av_Price = av_Price / len(gd.vesselRefIds)
-
-        myCatchArray.append(weight / 1000)
-        avCatchArray.append(av_Weight / 1000)
-        myCatchValueArray.append(price / 1000 / 1000)
-        avCatchValueArray.append(av_Price / 1000 / 1000)
-
-    gd.dataArray.append(myCatchArray)
-    gd.dataArray.append(avCatchArray)
-    gd.dataArray.append(myCatchValueArray)
-    gd.dataArray.append(avCatchValueArray)
-
-    print("myCatch array:", myCatchArray)
-    print("myCatchValue array:", myCatchValueArray)
-    print("avCatch array:", avCatchArray)
-    print("avCatchValue array:", avCatchValueArray)
-
-    span = monthsBetweenQdates(startDateList[0], endDateList[0])
-
-    title = (
-        "KPI-05: Fangst [Tonn] aggregert over {months} måneder\n"
-        "Lengde: {vGroup}, Redskap: {gGroup}"
-    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
-    plot(endDateList, myCatchArray, avCatchArray, title,
-         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
-         fName=toPngFile)
-
-    title = (
-        "KPI-05: Fangstverdi [mill. NOK] aggregert over {months} måneder\n"
-        "Lengde: {vGroup}, Redskap: {gGroup}"
-    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
-    plot(endDateList, myCatchValueArray, avCatchValueArray, title,
-         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
-         fName=toPngFile05_1)
+def kpi_05(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     
+    """
+       
+        Calculates KPI metrics related to catch weight and catch value for a vessel
+        compared to the average of a reference group.
 
-# ---------------------------------------------------------------------
-# KPI-05: Annual catch and catch value
-# ---------------------------------------------------------------------
-'''def kpi_05(noVessel, dataArray, toPngFile: str):
-    """KPI-05: Årlig fangst [Tonn/År] og fangstverdi [mill. NOK/År]."""
-    #client = _new_client()
-    toPngFile05_1 = "output/kpi05_1"
+        For each period in tripsArray:
+        - trip[0] contains trips for the main vessel
+        - trip[1] contains trips for all vessels in the reference group
 
-    norskLgroup = _norsk_length_group(gd.lengthG)
-    startDateList, endDateList = gd.datesArray
-    if not startDateList or not endDateList:
-        print("kpi_05: No dates provided.")
-        return
+        The function sums:
+        - Catch weight (kg → tons)
+        - Catch value (NOK → million NOK)
 
-    myCatchArray = ['Fangst [tonn]']
-    myCatchValueArray = ['Fangstverdi [mill. NOK]']
-    avCatchArray = ['Gj.snitt fangst [tonn]']
-    avCatchValueArray = ['Gj.snitt fangstverdi [mill. NOK]']
+        It then calculates average values based on the number of vessels
+        in gd.vesselRefIds.
 
-    for element in dataArray:
-        my_items = element[2]     
-        for tur in my_items:
+        Returns a dictionary with 6 Lists:
+        - myCatchList
+        - refCatchList
+        - myCatchValueList
+        - refCatchValueList
+        - myFuelList
+        - refFuelList
+        """
+    
+    # JSON keys
+    myCatchList = ['Fangst']
+    myCatchValueList = ['Fangstverdi']
+    refCatchList = ['refFangst']
+    refCatchValueList = ['refFangstverdi']
+    myFuelList = ["Drivstoff"]
+    refFuelList = ["refDrivstoff"]
+
+    formatString = '%Y-%m-%dT%H:%M:%S%z'
+
+    for trip in tripsArray:
+        sumWeight = 0
+        sumPrice = 0
+        sumFuel = 0
+        sumDistance = 0  
+        sumRefWeight = 0
+        sumRefPrice = 0
+        sumRefFuel = 0
+        sumHours = 0
+        sumRefHours = 0
+        
+        myTrip = trip[0]    
+        for tur in myTrip:
                 delivery = _safe_get_dict(tur, 'delivery')
-                weight += _safe_get(delivery, 'totalLivingWeight')
-                price += _safe_get(delivery, 'totalPriceForFisher')
-                fuel += _safe_get(tur, 'fuelConsumption')
-                distance += _safe_get(tur, 'distance')
+                sumWeight += _safe_get(delivery, 'totalLivingWeight')
+                sumPrice += _safe_get(delivery, 'totalPriceForFisher')
+                sumFuel += _safe_get(tur, 'fuelConsumption')
+                sumDistance += _safe_get(tur, 'distance')
+                startString = _safe_get_string(tur, 'start')
+                endString = _safe_get_string(tur, 'end')
+                startDateTime = datetime.datetime.strptime(startString, formatString)
+                endDateTime = datetime.datetime.strptime(endString, formatString)
+                timeDiff = endDateTime - startDateTime
+                tripHours = timeDiff.total_seconds() / 3600
+                sumHours += tripHours
+
+                
         
-        
-        all_items = element[3]
-        for tur in all_items:
+        allTrips = trip[1]
+        for tur in allTrips:
             delivery = _safe_get_dict(tur, 'delivery')
-            av_Weight += _safe_get(delivery, 'totalLivingWeight')
-            av_Price += _safe_get(delivery, 'totalPriceForFisher')
-            #fuel += _safe_get(tur, 'fuelConsumption')
-            #distance += _safe_get(tur, 'distance')
+            sumRefWeight += _safe_get(delivery, 'totalLivingWeight')
+            sumRefPrice += _safe_get(delivery, 'totalPriceForFisher')
+            sumRefFuel += _safe_get(tur, 'fuelConsumption')
+            startDateTime = datetime.datetime.strptime(startString, formatString)
+            endDateTime = datetime.datetime.strptime(endString, formatString)
+            timeDiff = endDateTime - startDateTime
+            refHours = timeDiff.total_seconds() / 3600
+            sumRefHours += refHours
+            
+        sumRefWeight = sumRefWeight / len(gd.vesselRefIds)        #Average over all vessels in ref group
+        sumRefPrice = sumRefPrice / len(gd.vesselRefIds)          #Average over all vessels in ref group
+        sumRefFuel = sumRefFuel / len(gd.vesselRefIds)            #Average over all vessels in ref group
 
-        av_Weight = av_Weight / len(gd.vesselRefIds)
-        av_Price = av_Price / len(gd.vesselRefIds)
+        myCatchList.append(sumWeight / 1000)                  #(kg → tons)
+        refCatchList.append(sumRefWeight / 1000)               #(kg → tons)
+        myCatchValueList.append(sumPrice / 1000 / 1000)       #(NOK → million NOK)
+        refCatchValueList.append(sumRefPrice / 1000 / 1000)    #(NOK → million NOK)
+        myFuelList.append(sumFuel / 1000)                     #(Liter → kLiter)
+        refFuelList.append(sumRefFuel / 1000)                  #(Liter → kLiter)
 
-        myCatchArray.append(weight / 1000)
-        avCatchArray.append(av_Weight / 1000)
-        myCatchValueArray.append(price / 1000 / 1000)
-        avCatchValueArray.append(av_Price / 1000 / 1000)
+    # resultArray to be returned
+    resultDict = {"myCatchList": myCatchList}
+    resultDict.update({"refCatchList": refCatchList})
+    resultDict.update({"myCatchValueList": myCatchValueList})
+    resultDict.update({"refCatchValueList": refCatchValueList})
+    resultDict.update({"myFuelList": myFuelList})
+    resultDict.update({"refFuelList": refFuelList})
 
-    gd.dataArray.append(myCatchArray)
-    gd.dataArray.append(avCatchArray)
-    gd.dataArray.append(myCatchValueArray)
-    gd.dataArray.append(avCatchValueArray)
+    return resultDict 
 
-    print("myCatch array:", myCatchArray)
-    print("myCatchValue array:", myCatchValueArray)
-    print("avCatch array:", avCatchArray)
-    print("avCatchValue array:", avCatchValueArray)
 
-    span = monthsBetweenQdates(startDateList[0], endDateList[0])
 
-    title = (
-        "KPI-05: Fangst [Tonn] aggregert over {months} måneder\n"
-        "Lengde: {vGroup}, Redskap: {gGroup}"
-    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
-    plot(endDateList, myCatchArray, avCatchArray, title,
-         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
-         fName=toPngFile)
-
-    title = (
-        "KPI-05: Fangstverdi [mill. NOK] aggregert over {months} måneder\n"
-        "Lengde: {vGroup}, Redskap: {gGroup}"
-    ).format(months=span, vGroup=norskLgroup, gGroup=gd.gearG)
-    plot(endDateList, myCatchValueArray, avCatchValueArray, title,
-         "{antall} båter i referansegruppen".format(antall=gd.nVessels),
-         fName=toPngFile05_1)'''
 
 # ---------------------------------------------------------------------
 # Utilities (pagination, main species), now using the client per call
@@ -525,24 +529,25 @@ def getAllTripsInPeriod(endpoint: str, sDate: QDate, eDate: QDate,
 #   myTrips dictionary and refGroupTrips dictionary
 # ---------------------------------------------------------------------
 
-def __getAllTripsInPeriod(endpoint: str, gd: List[Dict[str, Any]]) -> None:
+def getAllTripsInPeriods(endpoint: str, gd: List[Dict[str, Any]], periodArray: List[Dict[str, Any]] ) -> None:
     page_size = 100
+    dataSet = []
+    maxNoVessels = 0
 
-    getDatesArray(gd)
-    startDateList, endDateList = gd.datesArray
-    returnElement = []
-
-    for sDate, eDate in zip(startDateList, endDateList):
+    for dateTuple in periodArray:
          ##############################################
         # Collect data from all my trips in the period
         ##############################################   
         offset = 0
         my_items: List[Dict[str, Any]] = []
+
+        # Set start date one month earlier to include trips that have started in prevoious period
+        sDate = dateTuple[0].addMonths(-1)
         
         while True:
             client = _new_client()
             page = client.get(
-                E_TRIPS, sDate=sDate, eDate=eDate,
+                endpoint, sDate=sDate, eDate=dateTuple[1],
                 vesselGroups=gd.lengthG, gearGroups=gd.gearG,
                 speciesGroups=gd.specG, locationGroups=gd.locG,
                 vesselId = gd.vesselId, limit = page_size, offset = offset
@@ -556,13 +561,7 @@ def __getAllTripsInPeriod(endpoint: str, gd: List[Dict[str, Any]]) -> None:
                 break
             offset += page_size
 
-        '''for tur in my_items:
-                delivery = _safe_get_dict(tur, 'delivery')
-                weight += _safe_get(delivery, 'totalLivingWeight')
-                price += _safe_get(delivery, 'totalPriceForFisher')
-                fuel += _safe_get(tur, 'fuelConsumption')
-                distance += _safe_get(tur, 'distance')'''
-        
+                
         #####################################################################
         # Collect data from trips in the reference group in the period
         #####################################################################
@@ -572,7 +571,7 @@ def __getAllTripsInPeriod(endpoint: str, gd: List[Dict[str, Any]]) -> None:
         while True:
             client = _new_client()
             page = client.get(
-                E_TRIPS, sDate=sDate, eDate=eDate,
+                endpoint, sDate=sDate, eDate=dateTuple[1],
                 vesselGroups=gd.lengthG, gearGroups=gd.gearG,
                 speciesGroups=gd.specG, locationGroups=gd.locG,
                 vesselId = gd.vesselRefIds,  # reference group
@@ -587,24 +586,52 @@ def __getAllTripsInPeriod(endpoint: str, gd: List[Dict[str, Any]]) -> None:
                 break
             offset += page_size
 
-        '''for tur in all_items:
-            delivery = _safe_get_dict(tur, 'delivery')
-            av_Weight += _safe_get(delivery, 'totalLivingWeight')
-            av_Price += _safe_get(delivery, 'totalPriceForFisher')
-            #fuel += _safe_get(tur, 'fuelConsumption')
-            #distance += _safe_get(tur, 'distance')
-
-        av_Weight = av_Weight / len(gd.vesselRefIds)
-        av_Price = av_Price / len(gd.vesselRefIds)'''
-
-        '''myCatchArray.append(weight / 1000)
-        avCatchArray.append(av_Weight / 1000)
-        myCatchValueArray.append(price / 1000 / 1000)
-        avCatchValueArray.append(av_Price / 1000 / 1000)'''
-
-        returnElement.append([sDate, eDate, my_items, all_items])
+        periodNoVessels = noVessels(all_items)
+        if (periodNoVessels > maxNoVessels):
+            maxNoVessels = periodNoVessels
+        
+        # Now we must exclude trips that both started and ended in the month before our period starts
+        myNewItems, allNewItems = excludeTrips(my_items, all_items, sDate)
+        
+        dataSet.append((myNewItems, allNewItems))
     
-    return noVessels(all_items), returnElement
+    return maxNoVessels, dataSet
+    
+def excludeTrips(myItems, allItems, sDate):
+    #Convert sDat to string
+    sDateString = sDate.toString("yyyy-MM-dd")
+    
+    #extract month number
+    m = re.search(r'\b(0?[1-9]|1[0-2])\b', sDateString)
+    if m:
+        ext_month = int(m.group(1))  
+
+    new_myList = []
+    for tour in myItems:
+        eDateString = tour["end"]
+        #extract month number
+        m = re.search(r'\b(0?[1-9]|1[0-2])\b', eDateString)
+        if m:
+            thisMonth = int(m.group(1))
+
+        if (thisMonth != ext_month):
+            new_myList.append(tour)
+            
+    #print("oldLen: ", len(myItems), "newLen: ", len(new_myList))
+    new_allList = []
+    for tour in allItems:
+        eDateString = tour["end"]
+        #extract month number
+        m = re.search(r'\b(0?[1-9]|1[0-2])\b', eDateString)
+        if m:
+            thisMonth = int(m.group(1))
+
+        if (thisMonth != ext_month):
+            new_allList.append(tour)
+    
+    #print("oldLen: ", len(allItems), "newLen: ", len(new_allList))
+    return new_myList, new_allList
+
 
 
 
