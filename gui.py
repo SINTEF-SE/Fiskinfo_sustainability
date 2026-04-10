@@ -10,11 +10,13 @@ from PySide6.QtCore import QSize, QDate
 from gui_helpers import *
 from reports import *
 #import reports as r
-from KPI import kpi_01, kpi_02, kpi_03_04, kpi_05, getAllTripsInPeriod, getAllTripsInPeriods
+from KPI import kpi_01, kpi_02, kpi_03_04, kpiCalculations, getAllTripsInPeriod, getAllTripsInPeriods
 
 from datafangst_client import DatafangstClient
 from utility import *
+from plot import *
 from dataclasses import dataclass
+from datetime import datetime
 
 
 # -------------------------
@@ -23,6 +25,11 @@ from dataclasses import dataclass
 ID_MY_VESSEL        = 2013063493  # Gadus Njord
 ID_REF_VESSELS      = [1999001513, 2011054408, 2018101213, 2000013339, 2013063493]        # Nordland Havfiske
 #ID_REF_VESSELS      = []
+
+#-------------------------
+# Output files directory
+#-------------------------
+OUTDIR = 'output/'
 
 # -------------------------
 # Endpoint constants
@@ -334,9 +341,9 @@ class MainWindow(QMainWindow):
         kpi_03_04_action.triggered.connect(self.kpi03_04_button_clicked)
         kpi_menu.addAction(kpi_03_04_action)
 
-        kpi_05_action = QAction(QIcon("AppIcons/cross-circle-frame.png"), "&KPI_05", self)
-        kpi_05_action.triggered.connect(self.kpi05_button_clicked)
-        kpi_menu.addAction(kpi_05_action)
+        kpi_action = QAction(QIcon("AppIcons/cross-circle-frame.png"), "&KPI", self)
+        kpi_action.triggered.connect(self.kpi_button_clicked)
+        kpi_menu.addAction(kpi_action)
 
         # --- Auth menu (status)
         auth_action = QAction(QIcon("AppIcons/door-open.png"), "&Authorize", self)
@@ -636,7 +643,7 @@ class MainWindow(QMainWindow):
         # KPIs
         kpi_01(this_kpiData, kpi01_pngFile)
         kpi_02(this_kpiData, kpi02_pngFile)
-        kpi_05(this_kpiData, kpi05_pngFile)
+        kpiCalculations(this_kpiData, kpi05_pngFile)
 
         # Export
         if toCsvFile:
@@ -796,13 +803,14 @@ class MainWindow(QMainWindow):
             json_to_csv(jsonDict, toCsvFile)
 
 
-    def kpi05_button_clicked(self):
+    def kpi_button_clicked(self):
         toPngFile5 = "output/kpi05"
         toPngFile6 = "output/kpi06"
         toCsvFile = "output/kpi-05-Report.csv" if self.storeCsv.isChecked() else ""
         toJsonFile = "output/kpi_05-Report.json"
         toPdfFile = "output/kpi_05-Report.pdf"
 
+        figList = []
         #Collect a copy of the gui data to be used in the KPI05 calculations
         this_kpiData = self.kpi_data(
             self.stopDateEdit.date(),
@@ -823,7 +831,7 @@ class MainWindow(QMainWindow):
             self.setInputChanged(False)
 
         
-        kpi05_results = kpi_05(this_kpiData, self.tripsArray)
+        kpi_results = kpiCalculations(this_kpiData, self.tripsArray)
         # create plots of the results
 
         span = this_kpiData.span
@@ -832,34 +840,172 @@ class MainWindow(QMainWindow):
             endDateList.append(i[1])
 
         norskLgroup = _norsk_length_group(this_kpiData.lengthG)
-        title = ("KPI-05: Fangst [Tonn] aggregert over {months} måneder\n"
-                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
 
-        plot(endDateList, kpi05_results["myCatchList"], kpi05_results["refCatchList"], title,
-            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile5)
+        today = datetime.today().strftime('%d-%m-%Y')
 
-        toPngFile = "output/kpi05_1"
-        title = ("KPI-05: Fangstverdi [mill. NOK] aggregert over {months} måneder\n"
-                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+        #######################################
+        # Plot EEOI per periode
+        #######################################
+        toPngFile = OUTDIR + "eeoi"
+        title = ("EEOI aggregert over {months} måneder\n\n").format(months=span)    # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}, Dato: {today}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG, today=today)
+
+        fig = plot(endDateList, kpi_results["myEeoiList"], kpi_results["refEeoiList"], title,text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+
+        #######################################
+        # Plot FUI per periode
+        #######################################
+        toPngFile = OUTDIR + "fui"
+        title = ("FUI aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        fig = plot(endDateList, kpi_results["myFuiList"], kpi_results["refFuiList"], title,text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+
+        #######################################
+        # Plot total Fangst per periode
+        #######################################
+        toPngFile = OUTDIR + "fangst"
+        title = ("Fangst aggregert over {months} måneder\n\n").format(months=span)      # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        fig = plot(endDateList, kpi_results["myCatchList"], kpi_results["refCatchList"], title,text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
         
-        plot(endDateList, kpi05_results["myCatchValueList"], kpi05_results["refCatchValueList"], title,
-            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile)
+        #input("Press Enter to continue...")
+        #exit()
         
-        title = ("KPI-06: Drivstofforbruk [liter] aggregert over {months} måneder\n"
-                "Lengde: {vGroup}, Redskap: {gGroup}").format(months=span, vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+        ########################################
+        # Plot gjennomsnittlig Fangst per tur
+        ########################################
+        toPngFile = OUTDIR + "fangstPerTur"
+        title = ("Gj. snittlig fangst per tur, {months} mnd perioder\n\n").format(months=span)      # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
 
-        plot(endDateList, kpi05_results["myFuelList"], kpi05_results["refFuelList"], title,
-            "{antall} båter i referansegruppen".format(antall=self.nVessels), fName=toPngFile6)
+        fig = plot(endDateList, kpi_results["weightPerTripList"], kpi_results["refWeightPerTripList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
 
+
+        #######################################
+        # Plot total Fangstverdi per periode
+        #######################################
+        toPngFile = OUTDIR + "fangstVerdi"
+        title = ("Fangstverdi aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+        
+        fig = plot(endDateList, kpi_results["myCatchValueList"], kpi_results["refCatchValueList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+        
+        ############################################
+        # Plot gjennomsnittlig Fangstverdi per tur
+        ############################################
+        toPngFile = OUTDIR + "fangstVerdiPerTur"
+        title = ("Gj. snittlig fangstverdi per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+        
+        fig = plot(endDateList, kpi_results["catchValuePerTripList"], kpi_results["refCatchValuePerTripList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+        
+        ########################################
+        # Plot Drivstofforbruk per periode
+        ########################################
+        toPngFile = OUTDIR + "bunkersForbruk"
+        title = ("Drivstofforbruk aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        fig = plot(endDateList, kpi_results["myFuelList"], kpi_results["refFuelList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+        
+         ##############################################
+        # Plot gjennomsnittlig drivstofforbruk per tur
+        ###############################################
+        toPngFile = OUTDIR + "bunkersPerTur"
+        title = ("Gj. snittlig drivstofforbruk per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        fig = plot(endDateList, kpi_results["fuelPerTripList"], kpi_results["refFuelPerTripList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+
+        #######################################
+        # Plot Drivstoffkostnad per periode
+        #######################################
+        # NB! Need fuel costs
+        toPngFile = OUTDIR + "bunkersKostnad"
+        title = ("Drivstoffkostnad aggregert over {months} måneder\n\n").format(months=span)        # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        fig = plot(endDateList, kpi_results["myFuelList"], kpi_results["refFuelList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+
+        # Plot gjennomsnittlig Drivstoffkostnad per tur
+
+        ##############################################
+        # Plot gjennomsnittlig antall dager per tur
+        ##############################################
+        toPngFile = OUTDIR + "dagerPerTur"
+        title = ("Gj. snittlig antall dager per tur, {months} mnd perioder\n\n").format(months=span)        # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        fig = plot(endDateList, kpi_results["daysPerTripList"], kpi_results["refDaysPerTripList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+
+        ###############################################
+        # Plot gjennomsnittlig seilt distanse per tur
+        ###############################################
+        toPngFile = OUTDIR + "distansePerTur"
+        title = ("Gj. snittlig seilt distanse per tur, {months} mnd perioder\n\n").format(months=span)      # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        fig = plot(endDateList, kpi_results["distancePerTripList"], kpi_results["refDistancePerTripList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+
+        ############################################
+        # Plot gjennomsnittlig CO2 per tur
+        ############################################
+        toPngFile = OUTDIR + "co2PerTur"
+        title = ("Gj. snittlig CO2 utslipp per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+
+        fig = plot(endDateList, kpi_results["myCO2PerTripList"], kpi_results["refCO2PerTripList"], title, text,
+            "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
+        figList.append(fig)
+
+        # Plot gjennomsnittlig aktive fisketimer per tur
+
+        # Plot gjennomsnittlig drivstoffkostnad for fangstaktive døgn, gj.snitt per tur
+
+        save_figs_to_pdf(
+            figList,
+            pdf_path=OUTDIR + "rapport.pdf",
+            metadata={
+                "Title": "KPI-rapport",
+                "Author": "Tore Syversen",
+                "Keywords": "fiskeri, KPI, rapport",
+            },
+            close=True,   # free memory
+            tight=True,   # prevent label clipping
+        )
 
         createPdfDoc(toPdfFile, toPngFile + ".png")
 
         if toCsvFile:
-            jsonDict = createJsonItem(this_kpiData, self.nVessels, self.periodArray, kpi05_results)
+            jsonDict = createJsonItem(this_kpiData, self.nVessels, self.periodArray, kpi_results)
             createJson(jsonDict, toJsonFile)
             json_to_csv(jsonDict, toCsvFile)
 
-
+        print('KPI calculation complete')
 
     # -------------------------
     # Window close

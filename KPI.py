@@ -4,13 +4,13 @@ from typing import List, Optional, Any, Dict, Mapping, MutableMapping, Iterable,
 import json
 from collections import Counter
 import re
-import datetime
+from datetime import datetime, timezone
 
 from PySide6.QtCore import QDate
 from datafangst_client import DatafangstClient
 
 # Only import what you need from utility to avoid namespace clashes
-from utility import nlg, monthsBetweenQdates, plot, noVessels, findMainSpecie, getDatesArray
+from utility import nlg, monthsBetweenQdates, plot2, noVessels, findMainSpecie, getDatesArray
 
 PRICE_DIFF = 5  # NOK: approx difference between autodiesel and MGO
 
@@ -26,7 +26,15 @@ SSB_PRICE_BASE = (
     "?lang=no&valueCodes[PetroleumProd]=035&valueCodes[ContentsCode]=Priser&valueCodes[Tid]="
 )
 
-CO2_FACTOR = 2.66           # kg CO2 / liter drivstoff
+CO2_FACTOR = 2.66              # kg CO2 / liter drivstoff
+HOURS_IN_DAY = 24              # number of hours in a day
+NM = 1852                      # nautisk mil in meters
+
+_FORMATS = [
+    "%Y-%m-%dT%H:%M:%SZ",      # no fractional seconds
+    "%Y-%m-%dT%H:%M:%S.%fZ",   # with fractional seconds
+]
+
 
 # ---------------------------------------------------------------------
 # Helpers
@@ -335,7 +343,7 @@ def kpi_03_04(gd: List[Dict[str, Any]], periodArray: List[Dict[str, Any]], nVess
         # SSB price for the month of sDate
         sDate=dateTuple[0]
         eDate=dateTuple[1]
-        ssb_url = _ssb_price_url(sDate, sDate)
+        ssb_url = _ssb_price_url(sDate, eDate)
         ssb = ssb_client.request(endpoint=ssb_url, auth=False) or {}
         price_values = ssb.get('value') if isinstance(ssb, dict) else None
         price = (price_values[0] if price_values else 0) - PRICE_DIFF
@@ -386,7 +394,7 @@ def kpi_03_04(gd: List[Dict[str, Any]], periodArray: List[Dict[str, Any]], nVess
 # ---------------------------------------------------------------------
 # KPI-05: Annual catch and catch value
 # ---------------------------------------------------------------------
-def kpi_05(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     
     """
        
@@ -414,65 +422,159 @@ def kpi_05(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[D
         """
     
     # JSON keys
-    myCatchList = ['Fangst']
-    myCatchValueList = ['Fangstverdi']
-    refCatchList = ['refFangst']
-    refCatchValueList = ['refFangstverdi']
-    myFuelList = ["Drivstoff"]
-    refFuelList = ["refDrivstoff"]
+    myEeoiList = ['EEOI']
+    refEeoiList = ['refEEOI']
+    myFuiList = ['FUI']
+    refFuiList = ['refFUI']
+    myCatchList = ['Fangst [tonn]']
+    myCatchValueList = ['Verdi [mill NOK]']
+    refCatchList = ['Fangst [tonn]']
+    refCatchValueList = ['Verdi [mill NOK]']
+    myFuelList = ["Drivstoff [K Liter]"]
+    refFuelList = ["Drivstoff [K liter]"]
+    myCO2PerTripList = ['CO2 [tonn]']
+    refCO2PerTripList = ['CO2 [tonn]']
+    myDistanceList = ['Distanse [nm]']
+    refDistanceList = ['Distanse [nm]']
+    myHoursList = ['Timer']
+    refHoursList = ['Timer']
+    weightPerTripList = ['Fangst [tonn]']
+    refWeightPerTripList = ['Fangst [tonn]']
+    catchValuePerTripList = ['Verdi [mill NOK]']
+    refCatchValuePerTripList = ['Verdi [mill NOK]']
+    daysPerTripList = ['Dager']
+    refDaysPerTripList = ['Dager']
+    fuelPerTripList = ['Drivstoff [K liter]']
+    refFuelPerTripList = ['Drivstoff [K liter]']
+    distancePerTripList = ['Distanse [nm]']
+    refDistancePerTripList = ['Distanse [nm]']
 
     formatString = '%Y-%m-%dT%H:%M:%S%z'
 
-    for trip in tripsArray:
+    '''ssb_client = _new_client()  # used only for request(); auth=False
+    for dateTuple in periodArray:
+        # SSB price for the month of sDate
+        sDate=dateTuple[0]
+        eDate=dateTuple[1]
+        ssb_url = _ssb_price_url(sDate, eDate)
+        ssb = ssb_client.request(endpoint=ssb_url, auth=False) or {}
+        price_values = ssb.get('value') if isinstance(ssb, dict) else None
+        price = (price_values[0] if price_values else 0) - PRICE_DIFF'''
+
+    for period in tripsArray:
         sumWeight = 0
         sumPrice = 0
         sumFuel = 0
+        sumCO2 = 0
         sumDistance = 0  
         sumRefWeight = 0
         sumRefPrice = 0
         sumRefFuel = 0
+        sumRefDistance = 0
         sumHours = 0
         sumRefHours = 0
+        sumRefWeightXdistance = 0
+        sumWeightXdistance = 0
         
-        myTrip = trip[0]    
+        myTrip = period[0] 
+        noMyTrips = len(myTrip)
         for tur in myTrip:
-                delivery = _safe_get_dict(tur, 'delivery')
-                sumWeight += _safe_get(delivery, 'totalLivingWeight')
-                sumPrice += _safe_get(delivery, 'totalPriceForFisher')
-                sumFuel += _safe_get(tur, 'fuelConsumption')
-                sumDistance += _safe_get(tur, 'distance')
-                startString = _safe_get_string(tur, 'start')
-                endString = _safe_get_string(tur, 'end')
-                startDateTime = datetime.datetime.strptime(startString, formatString)
-                endDateTime = datetime.datetime.strptime(endString, formatString)
-                timeDiff = endDateTime - startDateTime
-                tripHours = timeDiff.total_seconds() / 3600
-                sumHours += tripHours
+            delivery = _safe_get_dict(tur, 'delivery')
+            tripWeight = _safe_get(delivery, 'totalLivingWeight')
+            sumWeight += tripWeight
+            sumPrice += _safe_get(delivery, 'totalPriceForFisher')
+            fuel = _safe_get(tur, 'fuelConsumption')
+            if (fuel == 0):
+                sumFuel += _safe_get(tur, 'fuelConsumptionEstimatedOnly')
+            else:
+                sumFuel += fuel
+
+            tripDistance = _safe_get(tur, 'distance')
+            sumDistance += tripDistance
+            startString = _safe_get_string(tur, 'start')
+            endString = _safe_get_string(tur, 'end')
+            tripHours = getTripHours(startString, endString)
+            sumHours += tripHours
+            tripDistance = _safe_get(tur, 'distance')
+            sumWeightXdistance += tripWeight/1000*tripDistance/1852     # Aggregate over all tours
+
+        eeoi = sumFuel*CO2_FACTOR/sumWeightXdistance*1000               #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
+        fui = sumFuel*CO2_FACTOR/sumWeight*1000                         #(kg CO2 / ton → g CO2 / ton)
+
+        sumCO2 = sumFuel*CO2_FACTOR / noMyTrips                 # average over all trips
+        weightPerTrip = sumWeight / noMyTrips                   # average over all trips
+        pricePerTrip = sumPrice / noMyTrips                     # average over all trips
+        daysPerTrip = sumHours/HOURS_IN_DAY/noMyTrips           # average over all trips
+        fuelPerTrip = sumFuel/noMyTrips                         # average over all trips
+        distancePerTrip = sumDistance / noMyTrips               # average over all trips
 
                 
         
-        allTrips = trip[1]
+        allTrips = period[1]
+        noAllTrips = len(allTrips)
         for tur in allTrips:
             delivery = _safe_get_dict(tur, 'delivery')
-            sumRefWeight += _safe_get(delivery, 'totalLivingWeight')
+            tripRefWeight = _safe_get(delivery, 'totalLivingWeight')
+            sumRefWeight += tripRefWeight
             sumRefPrice += _safe_get(delivery, 'totalPriceForFisher')
-            sumRefFuel += _safe_get(tur, 'fuelConsumption')
-            startDateTime = datetime.datetime.strptime(startString, formatString)
-            endDateTime = datetime.datetime.strptime(endString, formatString)
-            timeDiff = endDateTime - startDateTime
-            refHours = timeDiff.total_seconds() / 3600
-            sumRefHours += refHours
-            
-        sumRefWeight = sumRefWeight / len(gd.vesselRefIds)        #Average over all vessels in ref group
-        sumRefPrice = sumRefPrice / len(gd.vesselRefIds)          #Average over all vessels in ref group
-        sumRefFuel = sumRefFuel / len(gd.vesselRefIds)            #Average over all vessels in ref group
+            refFuel = _safe_get(tur, 'fuelConsumption')
+            if (refFuel == 0):
+                sumRefFuel += _safe_get(tur, 'fuelConsumptionEstimatedOnly')
+            else:
+                sumRefFuel += refFuel
 
-        myCatchList.append(sumWeight / 1000)                  #(kg → tons)
-        refCatchList.append(sumRefWeight / 1000)               #(kg → tons)
-        myCatchValueList.append(sumPrice / 1000 / 1000)       #(NOK → million NOK)
-        refCatchValueList.append(sumRefPrice / 1000 / 1000)    #(NOK → million NOK)
-        myFuelList.append(sumFuel / 1000)                     #(Liter → kLiter)
-        refFuelList.append(sumRefFuel / 1000)                  #(Liter → kLiter)
+            tripRefDistance = _safe_get(tur, 'distance')
+            sumRefDistance += tripRefDistance
+            startString = _safe_get_string(tur, 'start')
+            endString = _safe_get_string(tur, 'end')
+            refHours = getTripHours(startString, endString)
+            sumRefHours += refHours
+            sumRefWeightXdistance += tripRefWeight/1000*tripRefDistance/1852        # Aggregate over all tours
+        
+        ref_eeoi = sumRefFuel*CO2_FACTOR/sumRefWeightXdistance*1000     #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
+        ref_fui = sumRefFuel*CO2_FACTOR/sumRefWeight*1000               #(kg CO2 / ton → g CO2 / ton)
+
+        
+        
+        refPricePerTrip = sumRefPrice / noAllTrips              # average over all trips
+        refDaysPerTrip = sumRefHours/HOURS_IN_DAY/noAllTrips    # average over all trips
+        refFuelPerTrip = sumRefFuel/noAllTrips                  # average over all trips
+        refDistancePerTrip = sumRefDistance / noAllTrips        # average over all trips
+        sumRefCO2 = sumRefFuel*CO2_FACTOR / noAllTrips          # average over all trips
+        refWeightPerTrip = sumRefWeight / noAllTrips            # average over all trips
+
+        sumRefWeight = sumRefWeight / len(gd.vesselRefIds)      #Average over all vessels in ref group
+        sumRefPrice = sumRefPrice / len(gd.vesselRefIds)        #Average over all vessels in ref group
+        sumRefFuel = sumRefFuel / len(gd.vesselRefIds)          #Average over all vessels in ref group
+
+       
+        myEeoiList.append(eeoi)                 
+        refEeoiList.append(ref_eeoi)
+        myFuiList.append(fui)     
+        refFuiList.append(ref_fui)   
+        myCatchList.append(sumWeight / 1000)                                #(kg → tons)
+        refCatchList.append(sumRefWeight / 1000)                            #(kg → tons)
+        myCatchValueList.append(sumPrice / 1000 / 1000)                     #(NOK → million NOK)
+        refCatchValueList.append(sumRefPrice / 1000 / 1000)                 #(NOK → million NOK)
+        myFuelList.append(sumFuel / 1000)                                   #(Liter → kLiter)
+        refFuelList.append(sumRefFuel / 1000)                               #(Liter → kLiter)
+        myCO2PerTripList.append(sumCO2 / 1000)                              #(kg → tons)
+        refCO2PerTripList.append(sumRefCO2 / 1000)                          #(kg → tons)
+        myDistanceList.append(sumDistance)
+        refDistanceList.append(sumRefDistance)
+        myHoursList.append(sumHours)
+        refHoursList.append(sumRefHours)
+        weightPerTripList.append(weightPerTrip / 1000)                      #(kg → tons)
+        refWeightPerTripList.append(refWeightPerTrip / 1000)                #(kg → tons)
+        catchValuePerTripList.append(pricePerTrip / 1000 / 1000)            #(NOK → million NOK)
+        refCatchValuePerTripList.append(refPricePerTrip / 1000 / 1000)      #(NOK → million NOK)
+        daysPerTripList.append(daysPerTrip)
+        refDaysPerTripList.append(refDaysPerTrip)
+        fuelPerTripList.append(fuelPerTrip / 1000)                          #(Liter → kLiter)
+        refFuelPerTripList.append(refFuelPerTrip / 1000)                    #(Liter → kLiter)
+        distancePerTripList.append(distancePerTrip / NM)                    # (meter -> nautisk mil)
+        refDistancePerTripList.append(refDistancePerTrip / NM)              # (meter -> nautisk mil)
+
 
     # resultArray to be returned
     resultDict = {"myCatchList": myCatchList}
@@ -481,6 +583,27 @@ def kpi_05(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[D
     resultDict.update({"refCatchValueList": refCatchValueList})
     resultDict.update({"myFuelList": myFuelList})
     resultDict.update({"refFuelList": refFuelList})
+    resultDict.update({"myCO2PerTripList": myCO2PerTripList})
+    resultDict.update({"refCO2PerTripList": refCO2PerTripList})
+    resultDict.update({"myDistanceList": myDistanceList})
+    resultDict.update({"refDistanceList": refDistanceList})
+    resultDict.update({"myHoursList": myHoursList})
+    resultDict.update({"refHoursList": refHoursList})
+    resultDict.update({"weightPerTripList": weightPerTripList})
+    resultDict.update({"refWeightPerTripList": refWeightPerTripList})
+    resultDict.update({"catchValuePerTripList": catchValuePerTripList})
+    resultDict.update({"refCatchValuePerTripList": refCatchValuePerTripList})
+    resultDict.update({"daysPerTripList": daysPerTripList})
+    resultDict.update({"refDaysPerTripList": refDaysPerTripList})
+    resultDict.update({"fuelPerTripList": fuelPerTripList})
+    resultDict.update({"refFuelPerTripList": refFuelPerTripList})
+    resultDict.update({"distancePerTripList": distancePerTripList})
+    resultDict.update({"refDistancePerTripList": refDistancePerTripList})
+    resultDict.update({"myEeoiList": myEeoiList})
+    resultDict.update({"refEeoiList": refEeoiList})
+    resultDict.update({"myFuiList": myFuiList})
+    resultDict.update({"refFuiList": refFuiList})
+
 
     return resultDict 
 
@@ -632,7 +755,26 @@ def excludeTrips(myItems, allItems, sDate):
     #print("oldLen: ", len(allItems), "newLen: ", len(new_allList))
     return new_myList, new_allList
 
+def getTripHours(startString, endString):
+    startDateTime = parse_utc_z_strptime(startString)
+    endDateTime = parse_utc_z_strptime(endString)
+    timeDiff = endDateTime - startDateTime
+    tripHours = timeDiff.total_seconds() / 3600   
+    return tripHours  
 
+def parse_utc_z_strptime(s: str) -> datetime:
+    last_err = None
+    for fmt in _FORMATS:
+        try:
+            dt = datetime.strptime(s, fmt)
+            return dt.replace(tzinfo=timezone.utc)
+        except ValueError as e:
+            last_err = e
+    raise ValueError(f"Unsupported datetime format for: {s}")
+
+
+    
+    
 
 
 def getMainSpecie(endpoint: str, sDate: QDate, eDate: QDate,

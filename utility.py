@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from PySide6.QtCore import QDate
 import datetime
+#from mpl_toolkits.axes_grid1.anchored_artists import AnchoredText
 
 # split catch location text into list of locations based on comma and line breaks
 def splitCatchLocation(field_text):
@@ -102,7 +103,7 @@ def monthsBetweenQdates(start_date, end_date) -> int:
     return months -1 # Subtract 1 because the loop counts the starting month as well
 
 
-def plot(x, y11, y21, title, xlabel, fName = "", show = False):
+def plot2(x, y11, y21, title, xlabel, fName = "", show = False):
         ylabel = y11[0]
         y1 = y11[1: len(y11)]
         y2 = y21[1: len(y21)]
@@ -112,6 +113,22 @@ def plot(x, y11, y21, title, xlabel, fName = "", show = False):
         xl = np.array(xT)
         xf = [n.strftime("%m-%Y") for n in xl]          # format date label
         
+        
+        '''text = (
+        "Data: Sensor A\n"
+        "Window: 10 s\n"
+        "Filtered: Yes\n"
+        "N = 200"
+        )
+        
+        anch = AnchoredText(
+                text, loc="upper left", prop=dict(size=9),
+                frameon=True, pad=0.4, borderpad=0.6)
+
+        
+        anch.patch.set_boxstyle("round,pad=0.3")'''
+        
+
         plt.figure()
         plt.bar(dx - width/2, y1, width = width, label = "Min båt", color='red')
         plt.bar(dx + width/2, y2, width = width, label = "Referanse", color = 'blue')
@@ -119,6 +136,8 @@ def plot(x, y11, y21, title, xlabel, fName = "", show = False):
         plt.xlabel(xlabel)
         plt.xticks(dx, labels=xf)
         plt.ylabel(ylabel)
+        #plt.add_artist(anch)
+
         plt.legend()
         if (show):         
                 plt.show()

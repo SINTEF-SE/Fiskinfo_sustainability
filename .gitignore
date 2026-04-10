@@ -9,3 +9,6 @@ Pipfile.lock
 *.json
 *_old.py
 *_AI.py
+*.pdf
+*.png
+

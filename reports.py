@@ -146,6 +146,7 @@ def json_to_csv(jsonData, toCsvFile):
 
  #----------------------- PDF Report-------------------------------------------------------
 
+    
 def createPdfDoc(filename, plotFileName):
     pdf = pdfExt.PDF() 
     #filename = 'tuto2.pdf'
@@ -154,7 +155,7 @@ def createPdfDoc(filename, plotFileName):
     filename = testDir + "/" + pdfName        #Test result PDF name'''
 
     #y_pos = pdf.printImage2('org.png', 'box.png')  
-    y_pos = pdf.printImage(plotFileName)  
+    y_pos = pdf.printImage(plotFileName) 
     #pdf.set_y(y_pos)
 
     #pdf.printHeadLine('Nummer', 'Dekning %', 'Type', 'Beskrivelse', 'Plasttype', 'Forurensning') 
