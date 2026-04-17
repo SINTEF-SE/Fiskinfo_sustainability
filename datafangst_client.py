@@ -106,7 +106,12 @@ class DatafangstClient:
         # Expand QDate → ISO time
         if request_type.endswith("/hauls"):
             # Uses month timestamps
-            params["months[]"] = getMonthTimestamps(sDate, eDate)
+            #params["months[]"] = getMonthTimestamps(sDate, eDate)
+            if sDate and sDate.isValid():
+                params["start"] = f"{sDate.toPython()}T00:00:00.000Z"
+
+            if eDate and eDate.isValid():
+                params["end"] = f"{eDate.toPython()}T23:59:59.999Z"
 
         else:
             if sDate and sDate.isValid():
@@ -119,19 +124,19 @@ class DatafangstClient:
         # Filters
         # ------------------------------------------------------------------
         if vesselGroups:
-            if request_type.endswith("/trips"):
+            if (request_type.endswith("/trips") or request_type.endswith("/hauls")):
                 params["vesselLengthGroups"] = vesselGroups
             else:
                 params["lengthGroup"] = vesselGroups
 
         if gearGroups:
-            if request_type.endswith("/trips"):
+            if (request_type.endswith("/trips") or request_type.endswith("/hauls")):
                 params["gearGroupIds"] = gearGroups
             else:
                 params["gearGroups"] = gearGroups
 
         if speciesGroups:
-            if request_type.endswith("/trips"):
+            if (request_type.endswith("/trips") or request_type.endswith("/hauls")):
                 params["speciesGroupIds"] = speciesGroups
             else:
                 params["speciesGroupId"] = speciesGroups
@@ -140,7 +145,7 @@ class DatafangstClient:
             params["catchLocations"] = locationGroups
 
         if vesselId:
-            if request_type.endswith("/trips"):
+            if (request_type.endswith("/trips") or request_type.endswith("/hauls")):
                 params["fiskeridirVesselIds"] = [vesselId]
             else:
                 params["vesselIds"] = [vesselId]   # API expects list
@@ -182,7 +187,10 @@ class DatafangstClient:
             resp = self.session.get(url, headers=headers, params=params)
             resp.raise_for_status()
         except requests.exceptions.RequestException as e:
-            logging.error(f"Request failed: {e}")
+            if (resp.status_code == 404):
+                logging.error("This request requires authorization")
+            else:
+                logging.error(f"Request failed: {e}")
             return None
 
         try:

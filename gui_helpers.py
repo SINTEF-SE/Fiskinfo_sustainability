@@ -1,6 +1,6 @@
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, Qt, QSize
 from PySide6.QtGui import QStandardItem, QFontMetrics, QStandardItemModel
-from PySide6.QtWidgets import QComboBox, QStyledItemDelegate
+from PySide6.QtWidgets import QComboBox, QStyledItemDelegate, QSizePolicy
 
 # Helper classes for gui setup
 # MultiComboBox for multiple choice combo box so more than one item can be selected for group boxes (e.g. lenght, gear, species)
@@ -24,7 +24,22 @@ class MultiComboBox(QComboBox):
 
         # Make the combo editable to set a custom text, but readonly
         self.setEditable(True)      # needed to create LineEdit
+        self.lineEdit().setMinimumWidth(80)
+        self.lineEdit().setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.lineEdit().setReadOnly(True)
+
+        
+        edit = self.lineEdit()
+
+        # Force the internal editor’s size policy
+        edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+
+        # Most important: override the editor's sizeHint
+        edit.sizeHint = lambda: QSize(80, edit.minimumSizeHint().height())
+
+        # Also override minimumSizeHint for consistency
+        edit.minimumSizeHint = lambda: QSize(80, edit.minimumSizeHint().height())
+
 
         # Catch exit via RETURN key to ensure proper text display
         self.lineEdit().returnPressed.connect(self.update_text)
@@ -108,4 +123,23 @@ class MultiComboBox(QComboBox):
             if item.checkState() == Qt.CheckState.Checked:
                 tds.append((item.text(), item.data()))
         return tds
+    
+    
+    def sizeHint(self):
+        base = super().sizeHint()
+        return QSize(80, base.height())   # default width = 80 px
+    
+    
+    def minimumSizeHint(self):
+        # Also required because many custom combos override this
+        return QSize(80, super().minimumSizeHint().height())
+
+
+    
+    def showPopup(self):
+        view = self.view()                  # popup view (list)
+        view.setMinimumWidth(250)           # width when expanded
+        view.setMaximumWidth(250)           # optional
+        super().showPopup()
+
 

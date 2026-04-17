@@ -10,7 +10,7 @@ from PySide6.QtCore import QDate
 from datafangst_client import DatafangstClient
 
 # Only import what you need from utility to avoid namespace clashes
-from utility import nlg, monthsBetweenQdates, plot2, noVessels, findMainSpecie, getDatesArray
+from utility import nlg, noVessels, findMainSpecie, getLengthGroups
 
 PRICE_DIFF = 5  # NOK: approx difference between autodiesel and MGO
 
@@ -108,296 +108,13 @@ def _ssb_price_url(start: QDate, end: QDate) -> str:
     eY, eM = end.year(), end.month()
     return SSB_PRICE_BASE + f"[range({sY}M{sM:02d},{eY}M{eM:02d})]"
 
-# ---------------------------------------------------------------------
-# KPI-01: EEOI
-# ---------------------------------------------------------------------
-'''
-def kpi_01(gd: List[Dict[str, Any]], periodArray: List[Dict[str, Any]], nVessels: int) -> List[Dict[str, Any]]: 
-    """
-        Calculates EEOI (Energy Efficiency Operational Indicator) for each
-        time period in periodArray.
-
-        For every (startDate, endDate) tuple:
-        - Retrieves EEOI for the main vessel (gd.vesselId)
-        - Retrieves average EEOI for the reference vessels (gd.vesselRefIds)
-
-        Values are returned in grams CO2 per (catch * nautical mile),
-        scaled from kg to grams (×1000).
-
-        Returns a dictionary containing:
-        - myEeoiArray: EEOI values for the main vessel
-        - avEeoiArray: Average EEOI values for the reference group
-        """
-
-    client = _new_client()
-
-    # JSON keys
-    myEeoiArray = ['EEOI']
-    avEeoiArray = ['avEEOI']
-
-    for dateTuple in periodArray:
-        my_val = client.get(
-            E_AV_EEOI,
-            sDate=dateTuple[0], eDate=dateTuple[1],
-            vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-            speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId = gd.vesselId,
-        )
-        av_val = client.get(
-            E_AV_EEOI,
-            sDate=dateTuple[0], eDate=dateTuple[1],
-            vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-            speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=gd.vesselRefIds,  # reference group
-        )
-
-        # endpoints return float; coerce and scale to grams
-        myEeoiArray.append(1000.0 * float(my_val or 0))
-        avEeoiArray.append(1000.0 * float(av_val or 0))
-
-    resultArray = {"myEeoiArray": myEeoiArray}
-    resultArray.update({"avEeoiArray": avEeoiArray})
-
-    return resultArray'''
-
-
-def kpi_01(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[Dict[str, Any]]: 
-    """
-        Calculates EEOI (Energy Efficiency Operational Indicator) for each
-        time period in periodArray.
-
-        For every (startDate, endDate) tuple:
-        - Retrieves EEOI for the main vessel (gd.vesselId)
-        - Retrieves average EEOI for the reference vessels (gd.vesselRefIds)
-
-        Values are returned in grams CO2 per (catch * nautical mile),
-        scaled from kg to grams (×1000).
-
-        Returns a dictionary containing:
-        - myEeoiArray: EEOI values for the main vessel
-        - avEeoiArray: Average EEOI values for the reference group
-        """
-
-    # JSON keys
-    myEeoiList = ['EEOI']
-    refEeoiList = ['refEEOI']
-    myFuiList = ['FUI']
-    refFuiList = ['refFUI']
-    
-    for trip in tripsArray:
-        sumFuel = 0
-        sumWeightXdistance = 0
-        sumWeight = 0
-        sumRefFuel = 0
-        sumRefWeightXdistance = 0
-        sumRefWeight = 0
-        
-        myTrip = trip[0]    
-        for tur in myTrip:
-            delivery = _safe_get_dict(tur, 'delivery')
-            tripFuel = _safe_get(tur, 'fuelConsumption') 
-            sumFuel += tripFuel                                        # Aggregate over all tours
-            tripWeight = _safe_get(delivery, 'totalLivingWeight')
-            sumWeight += tripWeight                                    # Aggregate over all tours
-            tripDistance = _safe_get(tur, 'distance')
-            sumWeightXdistance += tripWeight/1000*tripDistance/1852     # Aggregate over all tours
-                
-        eeoi = sumFuel*CO2_FACTOR/sumWeightXdistance*1000               #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
-        fui = sumFuel*CO2_FACTOR/sumWeight*1000                        #(kg CO2 / ton → g CO2 / ton)
-        
-        allTrips = trip[1]
-        for tur in allTrips:
-            delivery = _safe_get_dict(tur, 'delivery')
-            tripRefFuel = _safe_get(tur, 'fuelConsumption')
-            sumRefFuel += tripRefFuel                                   # Aggregate over all tours
-            tripRefWeight = _safe_get(delivery, 'totalLivingWeight')
-            sumRefWeight += tripRefWeight
-            tripRefDistance = _safe_get(tur, 'distance')
-            sumRefWeightXdistance += tripRefWeight/1000*tripRefDistance/1852        # Aggregate over all tours
-        
-        ref_eeoi = sumRefFuel*CO2_FACTOR/sumRefWeightXdistance*1000     #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
-        ref_fui = sumRefFuel*CO2_FACTOR/sumRefWeight*1000               #(kg CO2 / ton → g CO2 / ton)
-
-        myEeoiList.append(eeoi)                 
-        refEeoiList.append(ref_eeoi)
-        myFuiList.append(fui)     
-        refFuiList.append(ref_fui)          
-
-    # resultArray to be returned
-    resultDict = {"myEeoiList": myEeoiList}
-    resultDict.update({"refEeoiList": refEeoiList})
-    resultDict.update({"myFuiList": myFuiList})
-    resultDict.update({"refFuiList": refFuiList})
-
-    return resultDict
-
 
 # ---------------------------------------------------------------------
-# KPI-02: FUI
+# KPI: Calculate all KPIs
 # ---------------------------------------------------------------------
-def kpi_02(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], priceList: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     
     """
-        Calculates FUI (Fuel Use Intensity) for each time period in periodArray.
-
-        For every (startDate, endDate) tuple:
-        - Retrieves FUI for the main vessel (gd.vesselId)
-        - Retrieves average FUI for the reference vessels (gd.vesselRefIds)
-
-        Values are converted from kg to grams (×1000).
-
-        Returns a dictionary containing:
-        - myFuiArray: FUI values for the main vessel
-        - avFuiArray: Average FUI values for the reference group
-        """
-
-    # JSON keys
-    myEeoiList = ['EEOI']
-    refEeoiList = ['refEEOI']
-    myFuiList = ['FUI']
-    refFuiList = ['refFUI']
-    
-    for trip in tripsArray:
-        sumFuel = 0
-        sumWeightXdistance = 0
-        sumWeight = 0
-        sumRefFuel = 0
-        sumRefWeightXdistance = 0
-        sumRefWeight = 0
-        
-        myTrip = trip[0]    
-        for tur in myTrip:
-            delivery = _safe_get_dict(tur, 'delivery')
-            tripFuel = _safe_get(tur, 'fuelConsumption') 
-            sumFuel += tripFuel                                        # Aggregate over all tours
-            tripWeight = _safe_get(delivery, 'totalLivingWeight')
-            sumWeight += tripWeight                                    # Aggregate over all tours
-            tripDistance = _safe_get(tur, 'distance')
-            sumWeightXdistance += tripWeight/1000*tripDistance/1852     # Aggregate over all tours
-                
-        eeoi = sumFuel*CO2_FACTOR/sumWeightXdistance*1000               #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
-        fui = sumFuel*CO2_FACTOR/sumWeight*1000                        #(kg CO2 / ton → g CO2 / ton)
-        
-        allTrips = trip[1]
-        for tur in allTrips:
-            delivery = _safe_get_dict(tur, 'delivery')
-            tripRefFuel = _safe_get(tur, 'fuelConsumption')
-            sumRefFuel += tripRefFuel                                   # Aggregate over all tours
-            tripRefWeight = _safe_get(delivery, 'totalLivingWeight')
-            sumRefWeight += tripRefWeight
-            tripRefDistance = _safe_get(tur, 'distance')
-            sumRefWeightXdistance += tripRefWeight/1000*tripRefDistance/1852        # Aggregate over all tours
-        
-        ref_eeoi = sumRefFuel*CO2_FACTOR/sumRefWeightXdistance*1000     #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
-        ref_fui = sumRefFuel*CO2_FACTOR/sumRefWeight*1000               #(kg CO2 / ton → g CO2 / ton)
-
-        myEeoiList.append(eeoi)                 
-        refEeoiList.append(ref_eeoi)
-        myFuiList.append(fui)     
-        refFuiList.append(ref_fui)          
-
-    # resultArray to be returned
-    resultDict = {"myEeoiList": myEeoiList}
-    resultDict.update({"refEeoiList": refEeoiList})
-    resultDict.update({"myFuiList": myFuiList})
-    resultDict.update({"refFuiList": refFuiList})
-
-    return resultDict
-
-# ---------------------------------------------------------------------
-# KPI-03 and KPI-04: Revenue per ton & per hour (net, price-adjusted)
-# ---------------------------------------------------------------------
-def kpi_03_04(gd: List[Dict[str, Any]], periodArray: List[Dict[str, Any]], nVessels: int) -> List[Dict[str, Any]]:
-    
-    """
-        Calculates two KPIs for each (startDate, endDate) in periodArray:
-
-        KPI‑03: Netto fortjeneste per tonn fisk [NOK/tonn]
-                = (fangstverdi − drivstoffkostnad) / fangst (kg→tonn)
-
-        KPI‑04: Netto fortjeneste per time [NOK/time]
-                = (fangstverdi − drivstoffkostnad) / timer
-
-        For each period:
-        - Retrieves average metrics for the main vessel (gd.vesselId) and the reference group (gd.vesselRefIds)
-        - Uses SSB price for the month of sDate (adjusted by PRICE_DIFF)
-        - Computes NOK/tonn (by scaling kg → tonn with ×1000) and NOK/time
-
-        Returns a dictionary with four arrays:
-        - myRevPerTonWeightArray      : main vessel, NOK/tonn
-        - avRevPerTonWeightArray      : reference group, NOK/tonn
-        - myRevPerHourArray           : main vessel, NOK/time
-        - avRevPerHourArray           : reference group, NOK/time
-        """
-
-    df_client = _new_client()
-    ssb_client = _new_client()  # used only for request(); auth=False
-
-    # JSON keys
-    myRevPerTonWeightArray = ['NetRevenuePerTon']
-    avRevPerTonWeightArray = ['avNetRevenuePerTon']
-    myRevPerHourArray = ['NetRevenuePerHour']
-    avRevPerHourArray = ['avNetRevenuePerHour']
-
-    for dateTuple in periodArray:
-        # SSB price for the month of sDate
-        sDate=dateTuple[0]
-        eDate=dateTuple[1]
-        ssb_url = _ssb_price_url(sDate, eDate)
-        ssb = ssb_client.request(endpoint=ssb_url, auth=False) or {}
-        price_values = ssb.get('value') if isinstance(ssb, dict) else None
-        price = (price_values[0] if price_values else 0) - PRICE_DIFF
-
-        # My vessel
-        my_avg = df_client.get(
-            E_AVERAGE, sDate=sDate, eDate=eDate,
-            vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-            speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId = gd.vesselId,
-        ) or {}
-        my_cvf = _safe_get(my_avg, 'catchValuePerFuel')
-        my_wpf = _safe_get(my_avg, 'weightPerFuel')
-        my_wph = _safe_get(my_avg, 'weightPerHour')
-
-        # Reference group
-        av_avg = df_client.get(
-            E_AVERAGE, sDate=sDate, eDate=eDate,
-            vesselGroups=gd.lengthG, gearGroups=gd.gearG,
-            speciesGroups=gd.specG, locationGroups=gd.locG,
-            vesselId=gd.vesselRefIds,  # reference group
-        ) or {}
-        av_cvf = _safe_get(av_avg, 'catchValuePerFuel')
-        av_wpf = _safe_get(av_avg, 'weightPerFuel')
-        av_wph = _safe_get(av_avg, 'weightPerHour')
-
-        # NOK/tonn (kg→tonn)
-        my_rev_per_ton = _safe_div(my_cvf - price, my_wpf) * 1000.0
-        av_rev_per_ton = _safe_div(av_cvf - price, av_wpf) * 1000.0
-
-        # NOK/time
-        my_rev_per_hour = _safe_div((my_cvf - price) * my_wph, my_wpf)
-        av_rev_per_hour = _safe_div((av_cvf - price) * av_wph, av_wpf)
-
-        myRevPerTonWeightArray.append(my_rev_per_ton)
-        avRevPerTonWeightArray.append(av_rev_per_ton)
-        myRevPerHourArray.append(my_rev_per_hour)
-        avRevPerHourArray.append(av_rev_per_hour)
-
-    resultArray = {"myRevPerTonWeightArray": myRevPerTonWeightArray}
-    resultArray.update({"avRevPerTonWeightArray": avRevPerTonWeightArray})
-    resultArray.update({"myRevPerHourArray": myRevPerHourArray})
-    resultArray.update({"avRevPerHourArray": avRevPerHourArray})
-
-    return resultArray
-
-
-# ---------------------------------------------------------------------
-# KPI-05: Annual catch and catch value
-# ---------------------------------------------------------------------
-def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    
-    """
-       
         Calculates KPI metrics related to catch weight and catch value for a vessel
         compared to the average of a reference group.
 
@@ -420,47 +137,46 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) 
         - myFuelList
         - refFuelList
         """
+        
+    #-----------------------------------------------------------------------
+    # Define Lists for all the calculated data, the first value is the y-label for plot
+    #-----------------------------------------------------------------------
+    myEeoiList =                ['EEOI']
+    refEeoiList =               ['refEEOI']
+    myFuiList =                 ['FUI']
+    refFuiList =                ['refFUI']
+    myCatchList =               ['Fangst [tonn]']
+    myCatchValueList =          ['Verdi [mill NOK]']
+    refCatchList =              ['Fangst [tonn]']
+    refCatchValueList =         ['Verdi [mill NOK]']
+    myFuelList =                ["Drivstoff [K Liter]"]
+    refFuelList =               ["Drivstoff [K liter]"]
+    myFuelCostList =            ["Drivstoffkostnad [mill NOK]"]
+    refFuelCostList =           ["DrivstoffKostnad [mill NOK]"]
+    myCO2PerTripList =          ['CO2 [tonn]']
+    refCO2PerTripList =         ['CO2 [tonn]']
+    myDistanceList =            ['Distanse [nm]']
+    refDistanceList =           ['Distanse [nm]']
+    myHoursList =               ['Timer']
+    refHoursList =              ['Timer']
+    weightPerTripList =         ['Fangst [tonn]']
+    refWeightPerTripList =      ['Fangst [tonn]']
+    catchValuePerTripList =     ['Verdi [mill NOK]']
+    refCatchValuePerTripList =  ['Verdi [mill NOK]']
+    daysPerTripList =           ['Dager']
+    refDaysPerTripList =        ['Dager']
+    fuelPerTripList =           ['Drivstoff [K liter]']
+    refFuelPerTripList =        ['Drivstoff [K liter]']
+    distancePerTripList =       ['Distanse [nm]']
+    refDistancePerTripList =    ['Distanse [nm]']
+    fuelCostPerTripList =       ['Drivstoffkostnad [mill NOK]']
+    refFuelCostPerTripList =    ['Drivstoffkostnad [mill NOK]']
+    myRevPerTonWeightList =     ['Netto fortjeneste per tonn fangst [1000 NOK]']
+    avRevPerTonWeightList =     ['Netto fortjeneste per tonn fangst [1000 NOK]']
+    myRevPerHourList =          ['Netto fortjeneste per time [1000 NOK]']
+    avRevPerHourList =          ['Netto fortjeneste per time [1000 NOK]']
     
-    # JSON keys
-    myEeoiList = ['EEOI']
-    refEeoiList = ['refEEOI']
-    myFuiList = ['FUI']
-    refFuiList = ['refFUI']
-    myCatchList = ['Fangst [tonn]']
-    myCatchValueList = ['Verdi [mill NOK]']
-    refCatchList = ['Fangst [tonn]']
-    refCatchValueList = ['Verdi [mill NOK]']
-    myFuelList = ["Drivstoff [K Liter]"]
-    refFuelList = ["Drivstoff [K liter]"]
-    myCO2PerTripList = ['CO2 [tonn]']
-    refCO2PerTripList = ['CO2 [tonn]']
-    myDistanceList = ['Distanse [nm]']
-    refDistanceList = ['Distanse [nm]']
-    myHoursList = ['Timer']
-    refHoursList = ['Timer']
-    weightPerTripList = ['Fangst [tonn]']
-    refWeightPerTripList = ['Fangst [tonn]']
-    catchValuePerTripList = ['Verdi [mill NOK]']
-    refCatchValuePerTripList = ['Verdi [mill NOK]']
-    daysPerTripList = ['Dager']
-    refDaysPerTripList = ['Dager']
-    fuelPerTripList = ['Drivstoff [K liter]']
-    refFuelPerTripList = ['Drivstoff [K liter]']
-    distancePerTripList = ['Distanse [nm]']
-    refDistancePerTripList = ['Distanse [nm]']
-
-    formatString = '%Y-%m-%dT%H:%M:%S%z'
-
-    '''ssb_client = _new_client()  # used only for request(); auth=False
-    for dateTuple in periodArray:
-        # SSB price for the month of sDate
-        sDate=dateTuple[0]
-        eDate=dateTuple[1]
-        ssb_url = _ssb_price_url(sDate, eDate)
-        ssb = ssb_client.request(endpoint=ssb_url, auth=False) or {}
-        price_values = ssb.get('value') if isinstance(ssb, dict) else None
-        price = (price_values[0] if price_values else 0) - PRICE_DIFF'''
-
+    i = 0
     for period in tripsArray:
         sumWeight = 0
         sumPrice = 0
@@ -475,9 +191,9 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) 
         sumRefHours = 0
         sumRefWeightXdistance = 0
         sumWeightXdistance = 0
-        
         myTrip = period[0] 
         noMyTrips = len(myTrip)
+
         for tur in myTrip:
             delivery = _safe_get_dict(tur, 'delivery')
             tripWeight = _safe_get(delivery, 'totalLivingWeight')
@@ -500,6 +216,10 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) 
 
         eeoi = sumFuel*CO2_FACTOR/sumWeightXdistance*1000               #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
         fui = sumFuel*CO2_FACTOR/sumWeight*1000                         #(kg CO2 / ton → g CO2 / ton)
+        fuelCost = sumFuel * priceList[i]                               # Total fuel cost in the period
+        revPerTonWeight = (sumPrice - fuelCost) / sumWeight
+        revPerHour = (sumPrice - fuelCost) / sumHours
+
 
         sumCO2 = sumFuel*CO2_FACTOR / noMyTrips                 # average over all trips
         weightPerTrip = sumWeight / noMyTrips                   # average over all trips
@@ -507,6 +227,8 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) 
         daysPerTrip = sumHours/HOURS_IN_DAY/noMyTrips           # average over all trips
         fuelPerTrip = sumFuel/noMyTrips                         # average over all trips
         distancePerTrip = sumDistance / noMyTrips               # average over all trips
+        fuelCostPerTrip = fuelCost / noMyTrips                  # average over all trips
+        
 
                 
         
@@ -531,18 +253,22 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) 
             sumRefHours += refHours
             sumRefWeightXdistance += tripRefWeight/1000*tripRefDistance/1852        # Aggregate over all tours
         
+        refFuelCost = sumRefFuel * priceList[i]
         ref_eeoi = sumRefFuel*CO2_FACTOR/sumRefWeightXdistance*1000     #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
-        ref_fui = sumRefFuel*CO2_FACTOR/sumRefWeight*1000               #(kg CO2 / ton → g CO2 / ton)
-
+        ref_fui = sumRefFuel*CO2_FACTOR/sumRefWeight*1000               #(kg CO2 / ton → g CO2 / ton)  
+        refRevPerTonWeight = (sumRefPrice - refFuelCost) / sumRefWeight
+        refRevPerHour = (sumRefPrice - refFuelCost) / sumRefHours
+        refFuelCostPerTrip = refFuelCost / noAllTrips           # average over all trips  
         
-        
+        refFuelCost = sumRefFuel * priceList[i] / len(gd.vesselRefIds)  # average over all trips
+        refFuelPerTrip = sumRefFuel/noAllTrips                  # average over all trips
         refPricePerTrip = sumRefPrice / noAllTrips              # average over all trips
         refDaysPerTrip = sumRefHours/HOURS_IN_DAY/noAllTrips    # average over all trips
-        refFuelPerTrip = sumRefFuel/noAllTrips                  # average over all trips
         refDistancePerTrip = sumRefDistance / noAllTrips        # average over all trips
         sumRefCO2 = sumRefFuel*CO2_FACTOR / noAllTrips          # average over all trips
         refWeightPerTrip = sumRefWeight / noAllTrips            # average over all trips
-
+        # må sjekkes
+         
         sumRefWeight = sumRefWeight / len(gd.vesselRefIds)      #Average over all vessels in ref group
         sumRefPrice = sumRefPrice / len(gd.vesselRefIds)        #Average over all vessels in ref group
         sumRefFuel = sumRefFuel / len(gd.vesselRefIds)          #Average over all vessels in ref group
@@ -558,6 +284,8 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) 
         refCatchValueList.append(sumRefPrice / 1000 / 1000)                 #(NOK → million NOK)
         myFuelList.append(sumFuel / 1000)                                   #(Liter → kLiter)
         refFuelList.append(sumRefFuel / 1000)                               #(Liter → kLiter)
+        myFuelCostList.append(fuelCost / 1000 / 1000)                       #(NOK → mill NOK)
+        refFuelCostList.append(refFuelCost / 1000 / 1000)                   #(NOK → mill NOK)
         myCO2PerTripList.append(sumCO2 / 1000)                              #(kg → tons)
         refCO2PerTripList.append(sumRefCO2 / 1000)                          #(kg → tons)
         myDistanceList.append(sumDistance)
@@ -574,36 +302,52 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]]) 
         refFuelPerTripList.append(refFuelPerTrip / 1000)                    #(Liter → kLiter)
         distancePerTripList.append(distancePerTrip / NM)                    # (meter -> nautisk mil)
         refDistancePerTripList.append(refDistancePerTrip / NM)              # (meter -> nautisk mil)
+        myRevPerTonWeightList.append(revPerTonWeight)                       #(1000 NOK / tonn)
+        avRevPerTonWeightList.append(refRevPerTonWeight)                    #(1000 NOK / tonn)
+        myRevPerHourList.append(revPerHour / 1000)                          #(NOK → 1000 NOK)
+        avRevPerHourList.append(refRevPerHour / 1000)                       #(NOK → 1000 NOK)
+        fuelCostPerTripList.append(fuelCostPerTrip / 1000 / 1000)           #(NOK → mill NOK)
+        refFuelCostPerTripList.append(refFuelCostPerTrip /1000 / 1000)      #(NOK → mill NOK)
+        i += 1
 
 
-    # resultArray to be returned
-    resultDict = {"myCatchList": myCatchList}
-    resultDict.update({"refCatchList": refCatchList})
-    resultDict.update({"myCatchValueList": myCatchValueList})
-    resultDict.update({"refCatchValueList": refCatchValueList})
-    resultDict.update({"myFuelList": myFuelList})
-    resultDict.update({"refFuelList": refFuelList})
-    resultDict.update({"myCO2PerTripList": myCO2PerTripList})
-    resultDict.update({"refCO2PerTripList": refCO2PerTripList})
-    resultDict.update({"myDistanceList": myDistanceList})
-    resultDict.update({"refDistanceList": refDistanceList})
-    resultDict.update({"myHoursList": myHoursList})
-    resultDict.update({"refHoursList": refHoursList})
-    resultDict.update({"weightPerTripList": weightPerTripList})
-    resultDict.update({"refWeightPerTripList": refWeightPerTripList})
-    resultDict.update({"catchValuePerTripList": catchValuePerTripList})
-    resultDict.update({"refCatchValuePerTripList": refCatchValuePerTripList})
-    resultDict.update({"daysPerTripList": daysPerTripList})
-    resultDict.update({"refDaysPerTripList": refDaysPerTripList})
-    resultDict.update({"fuelPerTripList": fuelPerTripList})
-    resultDict.update({"refFuelPerTripList": refFuelPerTripList})
-    resultDict.update({"distancePerTripList": distancePerTripList})
-    resultDict.update({"refDistancePerTripList": refDistancePerTripList})
-    resultDict.update({"myEeoiList": myEeoiList})
-    resultDict.update({"refEeoiList": refEeoiList})
-    resultDict.update({"myFuiList": myFuiList})
-    resultDict.update({"refFuiList": refFuiList})
-
+    #--------------------------------------------------------------
+    # resultDictionary to be returned
+    #--------------------------------------------------------------
+    resultDict =      {"myCatchList":               myCatchList}
+    resultDict.update({"refCatchList":              refCatchList})
+    resultDict.update({"myCatchValueList":          myCatchValueList})
+    resultDict.update({"refCatchValueList":         refCatchValueList})
+    resultDict.update({"myFuelList":                myFuelList})
+    resultDict.update({"refFuelList":               refFuelList})
+    resultDict.update({"myFuelCostList":            myFuelCostList})
+    resultDict.update({"refFuelCostList":           refFuelCostList})
+    resultDict.update({"myCO2PerTripList":          myCO2PerTripList})
+    resultDict.update({"refCO2PerTripList":         refCO2PerTripList})
+    resultDict.update({"myDistanceList":            myDistanceList})
+    resultDict.update({"refDistanceList":           refDistanceList})
+    resultDict.update({"myHoursList":               myHoursList})
+    resultDict.update({"refHoursList":              refHoursList})
+    resultDict.update({"weightPerTripList":         weightPerTripList})
+    resultDict.update({"refWeightPerTripList":      refWeightPerTripList})
+    resultDict.update({"catchValuePerTripList":     catchValuePerTripList})
+    resultDict.update({"refCatchValuePerTripList":  refCatchValuePerTripList})
+    resultDict.update({"daysPerTripList":           daysPerTripList})
+    resultDict.update({"refDaysPerTripList":        refDaysPerTripList})
+    resultDict.update({"fuelPerTripList":           fuelPerTripList})
+    resultDict.update({"refFuelPerTripList":        refFuelPerTripList})
+    resultDict.update({"distancePerTripList":       distancePerTripList})
+    resultDict.update({"refDistancePerTripList":    refDistancePerTripList})
+    resultDict.update({"myEeoiList":                myEeoiList})
+    resultDict.update({"refEeoiList":               refEeoiList})
+    resultDict.update({"myFuiList":                 myFuiList})
+    resultDict.update({"refFuiList":                refFuiList})
+    resultDict.update({"myRevPerTonWeightList":     myRevPerTonWeightList})
+    resultDict.update({"avRevPerTonWeightList":     avRevPerTonWeightList})
+    resultDict.update({"myRevPerHourList":          myRevPerHourList})
+    resultDict.update({"avRevPerHourList":          avRevPerHourList})
+    resultDict.update({"fuelCostPerTripList":       fuelCostPerTripList})
+    resultDict.update({"refFuelCostPerTripList":    refFuelCostPerTripList})
 
     return resultDict 
 
@@ -666,6 +410,8 @@ def getAllTripsInPeriods(endpoint: str, gd: List[Dict[str, Any]], periodArray: L
 
         # Set start date one month earlier to include trips that have started in prevoious period
         sDate = dateTuple[0].addMonths(-1)
+
+        #lengthGroup = getLenghtGroups(gd.lengthG)
         
         while True:
             client = _new_client()
@@ -805,3 +551,18 @@ def getMainSpecie(endpoint: str, sDate: QDate, eDate: QDate,
     print("Antall turer funnet:", len(all_items))
     mainSpecieList = findMainSpecie(all_items)
     return Counter(mainSpecieList).most_common(1)[0][0] if mainSpecieList else None
+
+def getPricesInPeriod(periodArray):
+    priceList = []
+    ssb_client = _new_client()  # used only for request(); auth=False
+    for dateTuple in periodArray:
+        # SSB price for the month of sDate
+        sDate=dateTuple[0]
+        eDate=dateTuple[1]
+        ssb_url = _ssb_price_url(sDate, eDate)
+        ssb = ssb_client.request(endpoint=ssb_url, auth=False) or {}
+        price_values = ssb.get('value') if isinstance(ssb, dict) else None
+        price = (price_values[0] if price_values else 0) - PRICE_DIFF
+        priceList.append(price)
+
+    return priceList

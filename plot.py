@@ -5,7 +5,7 @@ from matplotlib.offsetbox import AnchoredText
 from matplotlib.backends.backend_pdf import PdfPages
 
 
-def plot(x, y11, y21, title, text, xlabel, fName = "", show = False):
+def plot(x, y11, y21 = None, title = None, text = None, xlabel = None, fName = "", show = False):
     # --- Global styling ---
     plt.style.use("seaborn-v0_8-whitegrid")   # Modern seaborn-like style
     #plt.style.use("seaborn-v0_8-paper")   # Modern seaborn-like style
@@ -33,7 +33,9 @@ def plot(x, y11, y21, title, text, xlabel, fName = "", show = False):
     
     # --- Data ---
     y1 = y11[1: len(y11)]
-    y2 = y21[1: len(y21)]
+    if y21 != None:
+        y2 = y21[1: len(y21)]
+    
     width = 0.25
     dx = np.arange(len(x))
     #dsDate = np.arange(len(sDate))
@@ -62,8 +64,13 @@ def plot(x, y11, y21, title, text, xlabel, fName = "", show = False):
         bottom=0.08                 # leave 8% for bottom margin
     )
 
-    mBars = ax.bar(dx - width/2, y1, width = width, label = "Min båt", color='red')
-    aBars = ax.bar(dx + width/2, y2, width = width, label = xlabel, color = 'blue')
+    if y21 is not None:
+        # Two bars → offset left and right
+        mBars = ax.bar(dx - width/2, y1, width = width, label = "Min båt", color='red')
+        aBars = ax.bar(dx + width/2, y2, width = width, label = xlabel, color = 'blue')
+    else:
+        # Single bar → centered on tick
+        mBars = ax.bar(dx, y1, width=width, label="Min båt", color='red')     
 
 
     for bar in mBars:
@@ -76,15 +83,16 @@ def plot(x, y11, y21, title, text, xlabel, fName = "", show = False):
             fontsize=10                         # override base font size
         )
 
-    for bar in aBars:
-        height = bar.get_height()
-        ax.text(
-            bar.get_x() + bar.get_width()/2,    # x-position (center of bar)
-            height,                             # y-position (top of bar)
-            f"{height:.1f}",                    # text (formatted)
-            ha='center', va='bottom',           # text alignment
-            fontsize=10                         # override base font size
-        )
+    if y21 is not None:
+        for bar in aBars:
+            height = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width()/2,    # x-position (center of bar)
+                height,                             # y-position (top of bar)
+                f"{height:.1f}",                    # text (formatted)
+                ha='center', va='bottom',           # text alignment
+                fontsize=10                         # override base font size
+            )
 
 
     # Labels & title
@@ -120,7 +128,7 @@ def plot(x, y11, y21, title, text, xlabel, fName = "", show = False):
     ax.legend(frameon=True)
 
     # Save high-resolution
-    fig.savefig("nice_figure.pdf")
+    #fig.savefig("nice_figure.pdf")
 
     if (show):         
         plt.show()

@@ -72,8 +72,7 @@ def getPeriodDates(gd):
 
         for m in reversed(range(0,gd.noPeriods)):
                 endDate = gd.endDate.addMonths(-m*gd.span)
-                days = endDate.daysInMonth()
-                endDate.setDate(endDate.year(), endDate.month(), days)
+                endDate.setDate(endDate.year(), endDate.month(), endDate.daysInMonth())
                 startDate = endDate.addMonths(-(gd.span-1))
                 startDate.setDate(startDate.year(), startDate.month(), 1)
                 newDate = (startDate, endDate)
@@ -179,4 +178,32 @@ def findMainSpecie(dict):
                 
        # print (idList)
         return idList
+
+def getLengthGroups(lengthG):
+      df_lengthG = []
+      
+      for lg in lengthG:
+            if lg == "< 11 m": df_lengthG.append("UnderEleven")
+            if lg == "11-15 m": df_lengthG.append("ElevenToFifteen")
+            if lg == "15-21 m": df_lengthG.append("FifteenToTwentyOne")
+            if lg == "22-28 m": df_lengthG.append("TwentyTwoToTwentyEight")
+            if lg == "> 28 m": df_lengthG.append("TwentyEightAndAbove")
+
+      return df_lengthG
+
+def getGearGroups(gearG):
+      df_gearG = []
+      
+      for gear in gearG:
+            if gear == "Not": df_gearG.append("Seine")
+            if gear == "Garn": df_gearG.append("Net")
+            if gear == "Krokredskap": df_gearG.append("HookGear")
+            if gear == "Teine": df_gearG.append("LobsterTrapAndFykeNets")
+            if gear == "Trål": df_gearG.append("Trawl")
+            if gear == "Snurrevad": df_gearG.append("DanishSeine")
+            if gear == "Harpun": df_gearG.append("HarpoonCannon")
+            if gear == "Annet redskap": df_gearG.append("OtherGear")
+            if gear == "Havbruk": df_gearG.append("FishFarming")
+
+      return df_gearG
 
