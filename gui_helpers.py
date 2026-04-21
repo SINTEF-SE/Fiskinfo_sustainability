@@ -1,6 +1,20 @@
-from PySide6.QtCore import QModelIndex, Qt, QSize
-from PySide6.QtGui import QStandardItem, QFontMetrics, QStandardItemModel
-from PySide6.QtWidgets import QComboBox, QStyledItemDelegate, QSizePolicy
+from PySide6.QtCore import QModelIndex, Qt, QSize, QEvent
+from PySide6.QtGui import QStandardItem, QFontMetrics, QStandardItemModel, QPalette
+#from PySide6.QtWidgets import QComboBox, QStyledItemDelegate, QSizePolicy
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QStyle,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+    QComboBox,
+    QStyledItemDelegate, 
+    QSizePolicy,
+    QPushButton
+)
 
 # Helper classes for gui setup
 # MultiComboBox for multiple choice combo box so more than one item can be selected for group boxes (e.g. lenght, gear, species)
@@ -143,3 +157,28 @@ class MultiComboBox(QComboBox):
         super().showPopup()
 
 
+class CustomTitleBar(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.layout = QHBoxLayout(self)
+        self.layout.setContentsMargins(5, 5, 5, 5)
+        self.layout.setSpacing(10)
+
+        # Title Label
+        self.title_label = QLabel("My Custom Window")
+        self.layout.addWidget(self.title_label)
+
+        # Spacer to push buttons to the right
+        self.layout.addStretch()
+
+        # Control Buttons
+        self.minimize_btn = QPushButton("—")
+        self.maximize_btn = QPushButton("◻")
+        self.close_btn = QPushButton("")
+        
+        self.layout.addWidget(self.minimize_btn)
+        self.layout.addWidget(self.maximize_btn)
+        self.layout.addWidget(self.close_btn)
+
+        # You'd connect these buttons to slots to control the parent window
+        # self.close_btn.clicked.connect(self.parent().close)

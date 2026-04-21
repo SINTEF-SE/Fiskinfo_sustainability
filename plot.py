@@ -1,7 +1,6 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.offsetbox import AnchoredText
 from matplotlib.backends.backend_pdf import PdfPages
 
 
@@ -174,50 +173,4 @@ def save_figs_to_pdf(figs, pdf_path, metadata=None, close=True, tight=True):
 
 
         
-            
-
-
-
-
-
-def plot1(x, y11, y21, title, xlabel, fName = "", show = False):
-        ylabel = y11[0]
-        y1 = y11[1: len(y11)]
-        y2 = y21[1: len(y21)]
-        width = 0.25
-        dx = np.arange(len(x))
-        xT = [n.toPython() for n in x]
-        xl = np.array(xT)
-        xf = [n.strftime("%m-%Y") for n in xl]          # format date label
-        
-        
-        '''text = (
-        "Data: Sensor A\n"
-        "Window: 10 s\n"
-        "Filtered: Yes\n"
-        "N = 200"
-        )
-        
-        anch = AnchoredText(
-                text, loc="upper left", prop=dict(size=9),
-                frameon=True, pad=0.4, borderpad=0.6)
-
-        
-        anch.patch.set_boxstyle("round,pad=0.3")'''
-        
-
-        plt.figure()
-        plt.bar(dx - width/2, y1, width = width, label = "Min båt", color='red')
-        plt.bar(dx + width/2, y2, width = width, label = "Referanse", color = 'blue')
-        plt.title(title)
-        plt.xlabel(xlabel)
-        plt.xticks(dx, labels=xf)
-        plt.ylabel(ylabel)
-        #plt.add_artist(anch)
-
-        plt.legend()
-        if (show):         
-                plt.show()
-        if (fName != ""):
-                plt.savefig(fName) 
-        plt.close()
+    

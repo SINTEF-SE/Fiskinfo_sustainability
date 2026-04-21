@@ -1,6 +1,6 @@
 
 # kpi_module.py
-from typing import List, Optional, Any, Dict, Mapping, MutableMapping, Iterable, Tuple
+from typing import List, Optional, Any, Dict, Mapping, MutableMapping, Iterable
 import json
 from collections import Counter
 import re
@@ -108,6 +108,57 @@ def _ssb_price_url(start: QDate, end: QDate) -> str:
     eY, eM = end.year(), end.month()
     return SSB_PRICE_BASE + f"[range({sY}M{sM:02d},{eY}M{eM:02d})]"
 
+def _excludeTrips(myItems, allItems, sDate):
+    #Convert sDat to string
+    sDateString = sDate.toString("yyyy-MM-dd")
+    
+    #extract month number
+    m = re.search(r'\b(0?[1-9]|1[0-2])\b', sDateString)
+    if m:
+        ext_month = int(m.group(1))  
+
+    new_myList = []
+    for tour in myItems:
+        eDateString = tour["end"]
+        #extract month number
+        m = re.search(r'\b(0?[1-9]|1[0-2])\b', eDateString)
+        if m:
+            thisMonth = int(m.group(1))
+
+        if (thisMonth != ext_month):
+            new_myList.append(tour)
+            
+    #print("oldLen: ", len(myItems), "newLen: ", len(new_myList))
+    new_allList = []
+    for tour in allItems:
+        eDateString = tour["end"]
+        #extract month number
+        m = re.search(r'\b(0?[1-9]|1[0-2])\b', eDateString)
+        if m:
+            thisMonth = int(m.group(1))
+
+        if (thisMonth != ext_month):
+            new_allList.append(tour)
+    
+    #print("oldLen: ", len(allItems), "newLen: ", len(new_allList))
+    return new_myList, new_allList
+
+def _getTripHours(startString, endString):
+    startDateTime = _parse_utc_z_strptime(startString)
+    endDateTime = _parse_utc_z_strptime(endString)
+    timeDiff = endDateTime - startDateTime
+    tripHours = timeDiff.total_seconds() / 3600   
+    return tripHours  
+
+def _parse_utc_z_strptime(s: str) -> datetime:
+    last_err = None
+    for fmt in _FORMATS:
+        try:
+            dt = datetime.strptime(s, fmt)
+            return dt.replace(tzinfo=timezone.utc)
+        except ValueError as e:
+            last_err = e
+    raise ValueError(f"Unsupported datetime format for: {s}")
 
 # ---------------------------------------------------------------------
 # KPI: Calculate all KPIs
@@ -209,7 +260,7 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
             sumDistance += tripDistance
             startString = _safe_get_string(tur, 'start')
             endString = _safe_get_string(tur, 'end')
-            tripHours = getTripHours(startString, endString)
+            tripHours = _getTripHours(startString, endString)
             sumHours += tripHours
             tripDistance = _safe_get(tur, 'distance')
             sumWeightXdistance += tripWeight/1000*tripDistance/1852     # Aggregate over all tours
@@ -249,7 +300,7 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
             sumRefDistance += tripRefDistance
             startString = _safe_get_string(tur, 'start')
             endString = _safe_get_string(tur, 'end')
-            refHours = getTripHours(startString, endString)
+            refHours = _getTripHours(startString, endString)
             sumRefHours += refHours
             sumRefWeightXdistance += tripRefWeight/1000*tripRefDistance/1852        # Aggregate over all tours
         
@@ -352,40 +403,6 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
     return resultDict 
 
 
-
-
-# ---------------------------------------------------------------------
-# Utilities (pagination, main species), now using the client per call
-# ---------------------------------------------------------------------
-def getAllTripsInPeriod(endpoint: str, sDate: QDate, eDate: QDate,
-                    lengthG: List[str], gearG: List[str], specG: List[str], locG: List[str]) -> int:
-    page_size = 100
-    offset = 0
-    all_items: List[Dict[str, Any]] = []
-
-    while True:
-        client = _new_client()
-        page = client.get(
-            endpoint,
-            sDate=sDate, eDate=eDate,
-            vesselGroups=lengthG, gearGroups=gearG,
-            speciesGroups=specG, locationGroups=locG,
-            #vesselId = gd.vesselId,
-            limit=page_size, offset=offset,
-        )
-
-        if not page or not isinstance(page, list):
-            break
-
-        all_items.extend(page)
-        if len(page) < page_size:
-            break
-        offset += page_size
-
-    print("Antall turer funnet:", len(all_items))
-    return noVessels(all_items)
-
-
 # ---------------------------------------------------------------------
 #   getAllDatesInPeriod(endpoint, gd)
 #
@@ -460,97 +477,12 @@ def getAllTripsInPeriods(endpoint: str, gd: List[Dict[str, Any]], periodArray: L
             maxNoVessels = periodNoVessels
         
         # Now we must exclude trips that both started and ended in the month before our period starts
-        myNewItems, allNewItems = excludeTrips(my_items, all_items, sDate)
+        myNewItems, allNewItems = _excludeTrips(my_items, all_items, sDate)
         
         dataSet.append((myNewItems, allNewItems))
     
     return maxNoVessels, dataSet
-    
-def excludeTrips(myItems, allItems, sDate):
-    #Convert sDat to string
-    sDateString = sDate.toString("yyyy-MM-dd")
-    
-    #extract month number
-    m = re.search(r'\b(0?[1-9]|1[0-2])\b', sDateString)
-    if m:
-        ext_month = int(m.group(1))  
 
-    new_myList = []
-    for tour in myItems:
-        eDateString = tour["end"]
-        #extract month number
-        m = re.search(r'\b(0?[1-9]|1[0-2])\b', eDateString)
-        if m:
-            thisMonth = int(m.group(1))
-
-        if (thisMonth != ext_month):
-            new_myList.append(tour)
-            
-    #print("oldLen: ", len(myItems), "newLen: ", len(new_myList))
-    new_allList = []
-    for tour in allItems:
-        eDateString = tour["end"]
-        #extract month number
-        m = re.search(r'\b(0?[1-9]|1[0-2])\b', eDateString)
-        if m:
-            thisMonth = int(m.group(1))
-
-        if (thisMonth != ext_month):
-            new_allList.append(tour)
-    
-    #print("oldLen: ", len(allItems), "newLen: ", len(new_allList))
-    return new_myList, new_allList
-
-def getTripHours(startString, endString):
-    startDateTime = parse_utc_z_strptime(startString)
-    endDateTime = parse_utc_z_strptime(endString)
-    timeDiff = endDateTime - startDateTime
-    tripHours = timeDiff.total_seconds() / 3600   
-    return tripHours  
-
-def parse_utc_z_strptime(s: str) -> datetime:
-    last_err = None
-    for fmt in _FORMATS:
-        try:
-            dt = datetime.strptime(s, fmt)
-            return dt.replace(tzinfo=timezone.utc)
-        except ValueError as e:
-            last_err = e
-    raise ValueError(f"Unsupported datetime format for: {s}")
-
-
-    
-    
-
-
-def getMainSpecie(endpoint: str, sDate: QDate, eDate: QDate,
-                  lengthG: List[str], gearG: List[str], specG: List[str], locG: List[str]) -> Optional[str]:
-    page_size = 100
-    offset = 0
-    all_items: List[Dict[str, Any]] = []
-
-    while True:
-        client = _new_client()
-        page = client.get(
-            endpoint,
-            sDate=sDate, eDate=eDate,
-            vesselGroups=lengthG, gearGroups=gearG,
-            speciesGroups=specG, locationGroups=locG,
-            limit=page_size, offset=offset,
-            vesselId=None,  # my vessel? set fiskdirId if needed
-        )
-
-        if not page or not isinstance(page, list):
-            break
-
-        all_items.extend(page)
-        if len(page) < page_size:
-            break
-        offset += page_size
-
-    print("Antall turer funnet:", len(all_items))
-    mainSpecieList = findMainSpecie(all_items)
-    return Counter(mainSpecieList).most_common(1)[0][0] if mainSpecieList else None
 
 def getPricesInPeriod(periodArray):
     priceList = []

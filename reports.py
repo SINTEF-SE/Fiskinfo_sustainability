@@ -1,16 +1,34 @@
 
-#from KPI import*
 import json
-import csv
-from PySide6.QtCore import QDate
-import pandas as pd
-from typing import Dict, Any
-import os
 import logging
-import pdfExt
+#import pdfExt
+
+#--------------------------------------------
+# Helpers
+#--------------------------------------------
+
+def _getKeys(jsonData):
+    """
+    Extracts the top‑level keys and the dataArray keys from a JSON‑like dict.
+
+    Returns:
+        keys1 : keys from the main metadata section
+        keys2 : keys from the first row in dataArray
+        dArr  : the full dataArray list
+    """
+    dArr = jsonData['dataArray']
+    jsonData = jsonData.copy()      # avoid mutating caller's data
+    jsonData.pop('dataArray')
+
+    keys1 = jsonData.keys()
+    keys2 = dArr[0].keys()
+
+    return keys1, keys2, dArr
 
 
-
+#------------------------------
+# API
+#------------------------------
 
 def createJsonItem(kpi_data, nVessels, periodArray, dataDict):
         
@@ -88,26 +106,6 @@ def createJson(data, jsonFile):
 
     
 
-def getKeys(jsonData):
-    """
-    Extracts the top‑level keys and the dataArray keys from a JSON‑like dict.
-
-    Returns:
-        keys1 : keys from the main metadata section
-        keys2 : keys from the first row in dataArray
-        dArr  : the full dataArray list
-    """
-    dArr = jsonData['dataArray']
-    jsonData = jsonData.copy()      # avoid mutating caller's data
-    jsonData.pop('dataArray')
-
-    keys1 = jsonData.keys()
-    keys2 = dArr[0].keys()
-
-    return keys1, keys2, dArr
-
-
-
 def json_to_csv(jsonData, toCsvFile): 
     """
     Writes JSON‑style KPI data to a CSV file.
@@ -119,7 +117,7 @@ def json_to_csv(jsonData, toCsvFile):
     Saves the CSV to the given file path.
     """
 
-    keys1, keys2, dataArray = getKeys(jsonData)
+    keys1, keys2, dataArray = _getKeys(jsonData)
 
     try:
         with open(toCsvFile, "w", encoding="utf-8") as f:
@@ -147,15 +145,15 @@ def json_to_csv(jsonData, toCsvFile):
  #----------------------- PDF Report-------------------------------------------------------
 
     
-def createPdfDoc(filename, plotFileName):
-    pdf = pdfExt.PDF() 
+#def createPdfDoc(filename, plotFileName):
+ #   pdf = pdfExt.PDF() 
     #filename = 'tuto2.pdf'
     '''fExt = fName.rsplit('.')
     pdfName = fName.replace(fExt[1], 'pdf')
     filename = testDir + "/" + pdfName        #Test result PDF name'''
 
     #y_pos = pdf.printImage2('org.png', 'box.png')  
-    y_pos = pdf.printImage(plotFileName) 
+ #   y_pos = pdf.printImage(plotFileName) 
     #pdf.set_y(y_pos)
 
     #pdf.printHeadLine('Nummer', 'Dekning %', 'Type', 'Beskrivelse', 'Plasttype', 'Forurensning') 
@@ -169,6 +167,6 @@ def createPdfDoc(filename, plotFileName):
         Plastic = 'PE'
         pdf.printObjectLine(str(m['id']), areaString, m['class'], m['description'], Plastic, str(m['pollution']), m['color'])'''
 
-    pdf.output(filename)
+ #   pdf.output(filename)
 
     # -------------------------------------------------

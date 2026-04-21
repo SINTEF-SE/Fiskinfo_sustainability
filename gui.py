@@ -3,20 +3,24 @@ from PySide6.QtWidgets import (
     QMainWindow, QToolBar, QCheckBox, QWidget, QPushButton, QApplication, QLabel,
     QDateEdit, QLineEdit, QTextEdit, QMessageBox, QSizePolicy, QHBoxLayout, QFormLayout, QVBoxLayout
 )
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction, QIcon, QPalette
 from PySide6.QtCore import QSize, QDate
 
 from gui_helpers import *
 from reports import *
-from KPI import kpiCalculations, getAllTripsInPeriod, getAllTripsInPeriods, getPricesInPeriod
+from KPI import kpiCalculations, getAllTripsInPeriods, getPricesInPeriod
 from datafangst_client import DatafangstClient
 from utility import *
 from plot import *
 from datetime import datetime
+import ast
 
 
 
-
+#--------------------------
+# appIcon
+#--------------------------
+APP_ICON = 'sustainable-icon.png'
 
 # -------------------------
 # Vessel IDs
@@ -113,10 +117,10 @@ def _norsk_length_group(lengthG) -> str:
     return f"[{', '.join(nlg(lg) for lg in lengthG) if lengthG else 'Alle'}]"
 
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
 
         # -------------------------
         # Basic state
@@ -154,7 +158,10 @@ class MainWindow(QMainWindow):
         # -------------------------
         # Window setup
         # -------------------------
+
+        self.setWindowIcon(QIcon(APP_ICON))
         self.setWindowTitle("FiskInfoPlattformen Bærekraftsmodul")
+       
         self.resize(QSize())
         mainWidget = QWidget()
         mainWidget.setStyleSheet(f"QWidget {{ background-color: {bg_mainwindow}; color: black; }}")
@@ -183,7 +190,7 @@ class MainWindow(QMainWindow):
         # --------------------------------------------------------
         self.outTextEdit = QTextEdit()
         self.outTextEdit.setStyleSheet(f"QTextEdit {{ background-color: {bg_outText}; color: black; }}")
-        self.outTextEdit.setMinimumHeight(100)
+        self.outTextEdit.setMinimumHeight(500)
         vbox.addWidget(self.outTextEdit)
 
         # --------------------------------------------------------
@@ -395,7 +402,7 @@ class MainWindow(QMainWindow):
         inRightForm.addRow("", self.myVessel)
 
         # Print API response to screen
-        self.infoOutput = QCheckBox("Vis API respons på skjerm", self)
+        self.infoOutput = QCheckBox("Vis API respons", self)
         self.infoOutput.setStyleSheet(f"QCheckBox {{ color: {api_text}; }}")
         inRightForm.addRow("", self.infoOutput)
 
@@ -551,13 +558,20 @@ class MainWindow(QMainWindow):
 
     def isInputChanged(self) -> bool:
         return self.inputHasChanged
+    
+    def printout(self, response):
+        if self.infoOutput.isChecked():
+            myText = ast.literal_eval(response.__str__())
+            jsonParsed = json.dumps(myText, indent = 4)
+            self.outTextEdit.append(jsonParsed)
+            self.outTextEdit.append("")
 
     # -------------------------
     # API Button Handlers
     # -------------------------
     def getGear_button_clicked(self):
         toCsvFile = "output/gear.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_GEAR,
             auth=False,  # public
             print_out=self.infoOutput.isChecked(),
@@ -565,39 +579,44 @@ class MainWindow(QMainWindow):
             append_csv=self.appendCsv.isChecked()
         )
 
+        self.printout(response)
+
     def getGearGroups_button_clicked(self):
         toCsvFile = "output/gearGroups.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_GEAR_GROUPS,
             auth=False,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getGearMainGroups_button_clicked(self):
         toCsvFile = "output/gearMainGroups.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_GEAR_MAIN_GROUPS,
             auth=False,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getVessels_button_clicked(self):
         toCsvFile = "output/vessels.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_VESSELS,
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getVesselsFuel_button_clicked(self):
         toCsvFile = "output/vesselsFuel.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_VESSEL_FUEL,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
@@ -606,43 +625,47 @@ class MainWindow(QMainWindow):
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getVesselsLiveFuel_button_clicked(self):
         toCsvFile = "output/vesselsLiveFuel.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_VESSEL_LIVE_FUEL,
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getVesselsBenchmarks_button_clicked(self):
         toCsvFile = "output/benchmarks.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_VESSEL_BENCHMARKS,
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getUser_button_clicked(self):
         toCsvFile = "output/user.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_USER,
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getTrips_button_clicked(self):
         toCsvFile = "output/trips.csv" if self.storeCsv.isChecked() else ""
         #vesselId = self.fiskdirId if self.myVessel.isChecked() else None
         vesselId = self.vesselId if self.myVessel.isChecked() else None
 
-        self.client.get(
+        response = self.client.get(
             E_TRIPS,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
@@ -657,11 +680,12 @@ class MainWindow(QMainWindow):
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getAvTripBenchmarks_button_clicked(self):
         toCsvFile = "output/avTripBenchmarks.csv" if self.storeCsv.isChecked() else ""
         vesselId = self.vesselId if self.myVessel.isChecked() else None
-        self.client.get(
+        response = self.client.get(
             E_TRIP_AVG,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
@@ -672,24 +696,27 @@ class MainWindow(QMainWindow):
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getEEOI_button_clicked(self):
         toCsvFile = "output/EEOI.csv" if self.storeCsv.isChecked() else ""
-        self.client.get(
+        response = self.client.get(
             E_EEOI,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
+           
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getAvEEOI_button_clicked(self):
         toCsvFile = "output/avEEOI.csv" if self.storeCsv.isChecked() else ""
         vesselId = self.vesselId if self.myVessel.isChecked() else None
 
-        self.client.get(
+        response = self.client.get(
             E_AVG_EEOI,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
@@ -702,12 +729,13 @@ class MainWindow(QMainWindow):
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getHaul_button_clicked(self):
         toCsvFile = "output/haul.csv" if self.storeCsv.isChecked() else ""
         vesselId = self.vesselId if self.myVessel.isChecked() else None
 
-        self.client.get(
+        response = self.client.get(
             E_HAULS,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
@@ -721,19 +749,21 @@ class MainWindow(QMainWindow):
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     def getPrice_button_clicked(self):
         """SSB fuel price (public, no auth)."""
         toCsvFile = "output/price.csv" if self.storeCsv.isChecked() else ""
         url = build_ssb_url(self.startDate, self.stopDateEdit.date())
 
-        self.client.request(
+        response = self.client.request(
             endpoint=url,
             auth=False,  # public
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
+        self.printout(response)
 
     # -------------------------
     # Auth / Sustainability placeholders
@@ -1070,7 +1100,7 @@ class MainWindow(QMainWindow):
     # Window close
     # -------------------------
     def closeEvent(self, event):
-        self.close()
+        event.accept()
 
 
 

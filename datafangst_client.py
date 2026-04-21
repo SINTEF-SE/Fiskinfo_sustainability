@@ -2,7 +2,6 @@
 import os
 import json
 import logging
-from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 
 import requests
@@ -10,6 +9,7 @@ import pandas as pd
 from PySide6.QtCore import QDate
 
 from utility import getMonthTimestamps
+from PySide6.QtWidgets import QTextEdit
 
 
 # ------------------------------------------------------------
@@ -169,7 +169,7 @@ class DatafangstClient:
         append_csv: bool = False,
         log_json: bool = False,
         print_out = False,
-        auth: bool = False
+        auth: bool = False,
     ):
             
         if endpoint.startswith("http://") or endpoint.startswith("https://"):
@@ -211,6 +211,8 @@ class DatafangstClient:
             print(json.dumps(data, indent=2, ensure_ascii=False))
             print("================================\n")
 
+            jsonText = json.dumps(data, indent=2, ensure_ascii=False)
+
 
         return data
 
@@ -235,7 +237,7 @@ class DatafangstClient:
         append_csv: bool = False,
         log_json: bool = False,
         print_out: bool = False,
-        auth: bool = False
+        auth: bool = False,
     ):
         params = self.build_params(
             request_type=request_type,

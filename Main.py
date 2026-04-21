@@ -9,5 +9,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     w = MainWindow()
     w.show()
+    # force inputChanged event
     w.inputChanged()
     sys.exit(app.exec())
