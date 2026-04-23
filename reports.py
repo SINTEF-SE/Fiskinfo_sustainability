@@ -30,7 +30,7 @@ def _getKeys(jsonData):
 # API
 #------------------------------
 
-def createJsonItem(kpi_data, nVessels, periodArray, dataDict):
+def createJsonItem(kpi_data, nVessels, periodArray, dataList):
         
     """
     Creates a JSON‑ready dictionary containing vessel info and KPI values.
@@ -42,6 +42,7 @@ def createJsonItem(kpi_data, nVessels, periodArray, dataDict):
     Returns a dictionary with vessel metadata and a 'dataArray' list of rows.
     """
 
+    #print(dataList)
     # ---- Static vessel metadata ----
     data = {
         "vesselName": kpi_data.vesselId,
@@ -55,30 +56,30 @@ def createJsonItem(kpi_data, nVessels, periodArray, dataDict):
     }
 
     dataset_names = []
-    cleaned_data = {}
+    cleaned_data = []
 
-    for key, arr in dataDict.items():
-        dataset_names.append(arr[0])     # first element is the dataset name
-        cleaned_data[key] = arr[1:]      # values only
+    for arr in dataList:
+        dataset_names.append(arr[0])        # first element is the dataset name
+        cleaned_data.append(arr[1:])        # The rest of the elements are data values
 
     # ---- Index arrays ----
-    keys = list(cleaned_data.keys())
-    num_points = len(cleaned_data[keys[0]])
+    #keys = list(cleaned_data.keys())
+    num_points = len(cleaned_data[0])       # The number of data point in each element, ie. the number of date spans
             
     # ---- Construct json data rows ----
     jsonArray = []
-    for idx in range(num_points):
-        startDate = periodArray[idx][0].toString('dd-MM-yyyy')
-        endDate   = periodArray[idx][1].toString('dd-MM-yyyy')
+    for dateSpan in range(num_points):
+        startDate = periodArray[dateSpan][0].toString('dd-MM-yyyy')
+        endDate   = periodArray[dateSpan][1].toString('dd-MM-yyyy')
 
         row = {
             "startDate": startDate,
             "endDate": endDate
         }
 
-        for i, key in enumerate(keys):
+        for i in range(len(dataset_names)):
             dataset_name = dataset_names[i]
-            row[dataset_name] = cleaned_data[key][idx]
+            row[dataset_name] = cleaned_data[i][dateSpan]
 
         jsonArray.append(row)
 
@@ -102,7 +103,7 @@ def createJson(data, jsonFile):
     with open(jsonFile, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     
-    return json_data
+    logging.info(f"JSON file saved: {jsonFile}")
 
     
 
@@ -142,31 +143,3 @@ def json_to_csv(jsonData, toCsvFile):
 
 
 
- #----------------------- PDF Report-------------------------------------------------------
-
-    
-#def createPdfDoc(filename, plotFileName):
- #   pdf = pdfExt.PDF() 
-    #filename = 'tuto2.pdf'
-    '''fExt = fName.rsplit('.')
-    pdfName = fName.replace(fExt[1], 'pdf')
-    filename = testDir + "/" + pdfName        #Test result PDF name'''
-
-    #y_pos = pdf.printImage2('org.png', 'box.png')  
- #   y_pos = pdf.printImage(plotFileName) 
-    #pdf.set_y(y_pos)
-
-    #pdf.printHeadLine('Nummer', 'Dekning %', 'Type', 'Beskrivelse', 'Plasttype', 'Forurensning') 
-
-    '''for m in classified_masks:
-        #if method == "SAM":
-        areaString = f'{(m["area"] / size * 100):.1f}'
-        #else:
-        #  areaString = 'Null'
-    
-        Plastic = 'PE'
-        pdf.printObjectLine(str(m['id']), areaString, m['class'], m['description'], Plastic, str(m['pollution']), m['color'])'''
-
- #   pdf.output(filename)
-
-    # -------------------------------------------------

@@ -1,19 +1,23 @@
 
 from PySide6.QtWidgets import (
-    QMainWindow, QToolBar, QCheckBox, QWidget, QPushButton, QApplication, QLabel,
+    QMainWindow, QToolBar, QCheckBox, QWidget, QPushButton, QApplication, QLabel, QStatusBar,
     QDateEdit, QLineEdit, QTextEdit, QMessageBox, QSizePolicy, QHBoxLayout, QFormLayout, QVBoxLayout
 )
 from PySide6.QtGui import QAction, QIcon, QPalette
-from PySide6.QtCore import QSize, QDate
+from PySide6.QtCore import QSize, QDate, Qt, QThread, QTimer
+from dataclasses import dataclass
 
-from gui_helpers import *
+from gui_helpers import MultiComboBox
+from ssb_client import build_ssb_url
 from reports import *
 from KPI import kpiCalculations, getAllTripsInPeriods, getPricesInPeriod
 from datafangst_client import DatafangstClient
-from utility import *
-from plot import *
+from utility import getLengthGroups, getGearGroups, splitCatchLocation, getPeriodDates, norsk_length_group
+from plot_helpers import plot, save_figs_to_pdf
+from plots import createPlots
 from datetime import datetime
 import ast
+from kpi_worker import KPIWorker
 
 
 
@@ -21,6 +25,8 @@ import ast
 # appIcon
 #--------------------------
 APP_ICON = 'sustainable-icon.png'
+
+APP_TITLE = "FiskInfoPlattformen Bærekraftsmodul"
 
 # -------------------------
 # Vessel IDs
@@ -90,21 +96,11 @@ SPECIES_GROUPS = [
 bg_button = "#F1D014"
 bg_field = "#91E7F7"
 bg_outText = "#91E7F7"
-bg_mainwindow = "#D3F1FD"
+#bg_mainwindow = "#D3F1FD"
+bg_mainwindow = "#FFFFFFFF"
 api_text = "#061EA8"
 
-# -------------------------
-# SSB price endpoint builder
-# -------------------------
-def build_ssb_url(start: QDate, end: QDate) -> str:
-    base = (
-        "https://data.ssb.no/api/pxwebapi/v2/tables/09654/data"
-        "?lang=no&valueCodes[PetroleumProd]=035"
-        "&valueCodes[ContentsCode]=Priser&valueCodes[Tid]="
-    )
-    sY, sM = start.year(), start.month()
-    eY, eM = end.year(), end.month()
-    return base + f"[range({sY}M{sM:02d},{eY}M{eM:02d})]"
+
 
 def safe_int(text: str, default: int = 0) -> int:
     try:
@@ -112,10 +108,32 @@ def safe_int(text: str, default: int = 0) -> int:
     except Exception:
         return default
     
-def _norsk_length_group(lengthG) -> str:
-    """Format Norwegian vessel length group label."""
-    return f"[{', '.join(nlg(lg) for lg in lengthG) if lengthG else 'Alle'}]"
 
+
+@dataclass(frozen=True)
+class KPIData:
+    endDate: QDate
+    vesselId: int
+    vesselRefIds: list[int]
+    lengthG: list[str]
+    gearG: list[str]
+    specG: list[str]
+    locG: list[str]
+    span: int
+    noPeriods: int
+
+@dataclass(frozen = True)
+class checkBoxes:
+    eeoi: bool
+    fui: bool
+    catch: bool
+    fuel: bool
+    fuelcost: bool
+    revenue: bool
+    co2: bool
+    dhd: bool
+    showRefG: bool
+    
 
 
 class MainWindow(QMainWindow):
@@ -136,10 +154,14 @@ class MainWindow(QMainWindow):
 
         self.periodArray = []
         self.tripsArray = []
+        self.figList = []
+        self.toCsvFile = "output/kpi_Report.csv" #if self.storeCsv.isChecked() else ""
+        self.toJsonFile = "output/kpi_Report.json"
+        self.toPdfFile = "output/kpi_Report.pdf"
 
+        self._busy = False
         # Shared client
         self.client = DatafangstClient()
-
 
     
 #                           WINDOW LAYOUT                              
@@ -160,11 +182,11 @@ class MainWindow(QMainWindow):
         # -------------------------
 
         self.setWindowIcon(QIcon(APP_ICON))
-        self.setWindowTitle("FiskInfoPlattformen Bærekraftsmodul")
+        self.setWindowTitle(APP_TITLE)
        
         self.resize(QSize())
         mainWidget = QWidget()
-        mainWidget.setStyleSheet(f"QWidget {{ background-color: {bg_mainwindow}; color: black; }}")
+        #mainWidget.setStyleSheet(f"QWidget {{ background-color: {bg_mainwindow}; color: black; }}")
         self.setCentralWidget(mainWidget) 
 
         # --------------------------------------------------------
@@ -527,22 +549,6 @@ class MainWindow(QMainWindow):
         pef_menu.addAction(pef_action)
 
 
-    class kpi_data():
-        def __init__(self, endDate: QDate, vesselId: int, vesselRefIds: list[int],
-                 lengthgroup: list[str], gear: list[str], specie: list[str],
-                 location: list[str], span: int, periods: int):
-
-            self.endDate = endDate
-            self.vesselId = vesselId
-            self.vesselRefIds = vesselRefIds
-            self.lengthG = lengthgroup
-            self.gearG = gear
-            self.specG = specie
-            self.locG = location
-            self.span = span
-            self.noPeriods = periods
-
-
     # -------------------------
     # Change tracking
     # -------------------------
@@ -559,10 +565,11 @@ class MainWindow(QMainWindow):
     def isInputChanged(self) -> bool:
         return self.inputHasChanged
     
+   ################################FIX#########################################################
     def printout(self, response):
         if self.infoOutput.isChecked():
-            myText = ast.literal_eval(response.__str__())
-            jsonParsed = json.dumps(myText, indent = 4)
+            #myText = ast.literal_eval(response.__str__())
+            jsonParsed = json.dumps(response.json(), indent = 4)
             self.outTextEdit.append(jsonParsed)
             self.outTextEdit.append("")
 
@@ -775,326 +782,97 @@ class MainWindow(QMainWindow):
     # -------------------------
     # KPI menu handlers
     # -------------------------
-    
     def kpi_button_clicked(self):
-        toCsvFile = "output/kpi_Report.csv" #if self.storeCsv.isChecked() else ""
-        toJsonFile = "output/kpi_Report.json"
-        toPdfFile = "output/kpi_Report.pdf"
 
-        figList = []
-        #Collect a copy of the gui data to be used in the KPI05 calculations
-        this_kpiData = self.kpi_data(
-            self.stopDateEdit.date(),
-            self.vesselId,
-            self.vesselRefIds,
-            getLengthGroups(self.vesselCombo.checked_items_data()),
-            getGearGroups(self.gearCombo.checked_items_data()),
-            self.speciesCombo.checked_items_data(),
-            splitCatchLocation(self.locationText.toPlainText()),
-            int(self.aggEdit.text()),
-            int(self.resEdit.text())
-        )
+        # Get CheckBox states
+        self.myCheckBoxes = checkBoxes(
+            self.eeoi.isChecked(),
+            self.fui.isChecked(),
+            self.catch.isChecked(),
+            self.fuel.isChecked(),
+            self.fuelcost.isChecked(),
+            self.revenue.isChecked(),
+            self.co2.isChecked(),
+            self.dhd.isChecked(),
+            self.showRefG.isChecked()
+            )
 
+        # Perform new calculations only when input parameters have changed
         if self.isInputChanged():
-            self.outTextEdit.append("Henter data for alle turer i perioden....")
-            QApplication.processEvents()
-            self.periodArray = getPeriodDates(this_kpiData)
-            self.nVessels, self.tripsArray = getAllTripsInPeriods(E_TRIPS, this_kpiData, self.periodArray)
-            self.outTextEdit.append("Henter bunkerspriser i perioden....")
-            QApplication.processEvents()
-            self.priceList = getPricesInPeriod(self.periodArray)
-            self.setInputChanged(False)
+            # Disable the button without loosing focus
+            if self._busy:
+                return
+            self._busy = True
+            self.calcButton.setDown(True)
 
+            self.outTextEdit.append("Starter KPI-beregning…")
+            # Build KPI input
+            self.this_kpiData = KPIData(
+                endDate=self.stopDateEdit.date(),
+                vesselId=self.vesselId,
+                vesselRefIds=self.vesselRefIds,
+                lengthG=getLengthGroups(self.vesselCombo.checked_items_data()),
+                gearG=getGearGroups(self.gearCombo.checked_items_data()),
+                specG=self.speciesCombo.checked_items_data(),
+                locG=splitCatchLocation(self.locationText.toPlainText()),
+                span=int(self.aggEdit.text()),
+                noPeriods=int(self.resEdit.text()),
+            )
+
+            # Start worker thread
+            self._kpiThread = QThread()
+            self._kpiWorker = KPIWorker(self.this_kpiData)
+
+            self._kpiWorker.moveToThread(self._kpiThread)
+
+            self._kpiWorker.progress.connect(self.outTextEdit.append)
+            self._kpiWorker.finished.connect(self.on_kpi_finished)
+            self._kpiWorker.error.connect(self.on_kpi_error)
+
+            self._kpiThread.started.connect(self._kpiWorker.run)
         
-        self.outTextEdit.append("Beregner KPI'er....")
-        QApplication.processEvents()
-        kpi_results = kpiCalculations(this_kpiData, self.tripsArray, self.priceList)
+            self._kpiWorker.finished.connect(self._kpiThread.quit)
+            self._kpiWorker.finished.connect(self._kpiWorker.deleteLater)
+            self._kpiThread.finished.connect(self._kpiThread.deleteLater)
 
-        # create plots of the results
+            self._kpiThread.start()
 
-        span = this_kpiData.span
-        endDateList = []
-        for i in self.periodArray:
-            endDateList.append(i[1])
+        # If no change in input parameters, just plot results
+        else:
+            today = datetime.today().strftime('%d-%m-%Y')
+            norskLgroup = norsk_length_group(self.this_kpiData.lengthG)
+            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}, Dato: {today}").format(vGroup=norskLgroup, gGroup=self.this_kpiData.gearG, today=today)
+            createPlots(self.KpiResults, self.this_kpiData, text, self.myCheckBoxes, self.toPdfFile, self.toJsonFile, self.toCsvFile)
+            self.outTextEdit.append(f"PLOT:   --->   {self.toPdfFile}")
+            self.outTextEdit.append(f"JSON:   --->   {self.toJsonFile}")
+            self.outTextEdit.append(f"CSV :    --->   {self.toCsvFile}\n")
+      
+            
+    def on_kpi_finished(self, result):
+        # Enable the calcButton
+        self._busy = False
+        self.calcButton.setDown(False)
 
-        norskLgroup = _norsk_length_group(this_kpiData.lengthG)
-
+        self.setInputChanged(False)
+        self.KpiResults = result
         today = datetime.today().strftime('%d-%m-%Y')
-
-        self.outTextEdit.append("Plotter figurer....")
-        QApplication.processEvents()
-
-        #######################################
-        # Plot EEOI per periode
-        #######################################
-        if self.eeoi.isChecked():
-            toPngFile = OUTDIR + "eeoi"
-            title = ("EEOI aggregert over {months} måneder\n\n").format(months=span)    # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}, Dato: {today}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG, today=today)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myEeoiList"], kpi_results["refEeoiList"], title,text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myEeoiList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-        #######################################
-        # Plot FUI per periode
-        #######################################
-        if self.fui.isChecked():
-            toPngFile = OUTDIR + "fui"
-            title = ("FUI aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myFuiList"], kpi_results["refFuiList"], title,text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myFuiList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-        #######################################
-        # Plot total Fangst per periode
-        #######################################
-        if self.catch.isChecked():
-            toPngFile = OUTDIR + "fangst"
-            title = ("Fangst aggregert over {months} måneder\n\n").format(months=span)      # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myCatchList"], kpi_results["refCatchList"], title,text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myCatchList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
+        norskLgroup = norsk_length_group(self.this_kpiData.lengthG)
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}, Dato: {today}").format(vGroup=norskLgroup, gGroup=self.this_kpiData.gearG, today=today)
+        createPlots(self.KpiResults, self.this_kpiData, text, self.myCheckBoxes, self.toPdfFile, self.toJsonFile, self.toCsvFile)
+        self.outTextEdit.append(f"PLOT:   --->   {self.toPdfFile}")
+        self.outTextEdit.append(f"JSON:   --->   {self.toJsonFile}")
+        self.outTextEdit.append(f"CSV :    --->   {self.toCsvFile}\n")
         
-        ########################################
-        # Plot gjennomsnittlig Fangst per tur
-        ########################################
-            toPngFile = OUTDIR + "fangstPerTur"
-            title = ("Gj. snittlig fangst per tur, {months} mnd perioder\n\n").format(months=span)      # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["weightPerTripList"], kpi_results["refWeightPerTripList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else: 
-                fig = plot(endDateList, kpi_results["weightPerTripList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-
-        #######################################
-        # Plot total Fangstverdi per periode
-        #######################################
-            toPngFile = OUTDIR + "fangstVerdi"
-            title = ("Fangstverdi aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-            
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myCatchValueList"], kpi_results["refCatchValueList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myCatchValueList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
         
-        ############################################
-        # Plot gjennomsnittlig Fangstverdi per tur
-        ############################################
-            toPngFile = OUTDIR + "fangstVerdiPerTur"
-            title = ("Gj. snittlig fangstverdi per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-            
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["catchValuePerTripList"], kpi_results["refCatchValuePerTripList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["catchValuePerTripList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
+    def on_kpi_error(self, message):
+        # Enable the calcButton
+        self._busy = False
+        self.calcButton.setDown(False)
 
-        ########################################
-        # Plot Drivstofforbruk per periode
-        ########################################
-        if self.fuel.isChecked():
-            toPngFile = OUTDIR + "bunkersForbruk"
-            title = ("Drivstofforbruk aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
+        self.statusBar().clearMessage()
+        QMessageBox.critical(self, "KPI-feil", message)
 
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myFuelList"], kpi_results["refFuelList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myFuelList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-        
-         ##############################################
-        # Plot gjennomsnittlig drivstofforbruk per tur
-        ###############################################
-            toPngFile = OUTDIR + "bunkersPerTur"
-            title = ("Gj. snittlig drivstofforbruk per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["fuelPerTripList"], kpi_results["refFuelPerTripList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["fuelPerTripList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-        #######################################
-        # Plot Drivstoffkostnad per periode
-        #######################################
-        if self.fuelcost.isChecked():
-            toPngFile = OUTDIR + "bunkersKostnad"
-            title = ("Drivstoffkostnad aggregert over {months} måneder\n\n").format(months=span)        # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myFuelCostList"], kpi_results["refFuelCostList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myFuelCostList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-        ################################################
-        # Plot gjennomsnittlig Drivstoffkostnad per tur
-        ################################################
-            toPngFile = OUTDIR + "bunkersKostnadPerTur"
-            title = ("Gj. snittlig drivstoffkostnad per tur, {months} måneder\n\n").format(months=span)        # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["fuelCostPerTripList"], kpi_results["refFuelCostPerTripList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["fuelCostPerTripList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-        ################################################################################
-        # Plot gjennomsnittlig drivstoffkostnad for fangstaktive døgn, gj.snitt per tur
-        ################################################################################
-        # Hva er fangstaktivt døgn?
-
-        ##############################################
-        # Plot relativ fortjeneste per tonn drivstoff
-        ##############################################
-        if self.revenue.isChecked():
-            toPngFile = OUTDIR + "RelativFortjenestePerFangst"
-            title = ("Relativ fortjeneste per tonn fangst, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myRevPerTonWeightList"], kpi_results["avRevPerTonWeightList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myRevPerTonWeightList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-        ##############################################
-        # Plot relativ fortjeneste per time
-        ##############################################
-            toPngFile = OUTDIR + "RelativFortjenestePerTime"
-            title = ("Relativ fortjeneste per time, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myRevPerHourList"], kpi_results["avRevPerHourList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myRevPerHourList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-        
-        ############################################
-        # Plot gjennomsnittlig CO2 per tur
-        ############################################
-        if self.co2.isChecked():
-            toPngFile = OUTDIR + "co2PerTur"
-            title = ("Gj. snittlig CO2 utslipp per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["myCO2PerTripList"], kpi_results["refCO2PerTripList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["myCO2PerTripList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-        ##############################################
-        # Plot gjennomsnittlig antall dager per tur
-        ##############################################
-        if self.dhd.isChecked():
-            toPngFile = OUTDIR + "dagerPerTur"
-            title = ("Gj. snittlig antall dager per tur, {months} mnd perioder\n\n").format(months=span)        # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["daysPerTripList"], kpi_results["refDaysPerTripList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["daysPerTripList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            figList.append(fig)
-
-        ###############################################
-        # Plot gjennomsnittlig seilt distanse per tur
-        ###############################################
-            toPngFile = OUTDIR + "distansePerTur"
-            title = ("Gj. snittlig seilt distanse per tur, {months} mnd perioder\n\n").format(months=span)      # Add \n\n to push the title upwards
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}").format(vGroup=norskLgroup, gGroup=this_kpiData.gearG)
-
-            if self.showRefG.isChecked():
-                fig = plot(endDateList, kpi_results["distancePerTripList"], kpi_results["refDistancePerTripList"], title, text,
-                    "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-            else:
-                fig = plot(endDateList, kpi_results["distancePerTripList"], title = title,text = text,
-                    xlabel = "Referanse\n{antall} båter".format(antall=self.nVessels), fName=toPngFile)
-
-        
-        #################################################
-        # Plot gjennomsnittlig aktive fisketimer per tur
-        #################################################
-        # Finn start og stopp tid for alle hal på en tur og summer for å finne totaltid per tur
-        # Legg sammen alle turer i perioden
-
-        
-
-        save_figs_to_pdf(
-            figList,
-            pdf_path=toPdfFile,
-            metadata={
-                "Title": "KPI-rapport",
-                "Author": "Tore Syversen",
-                "Keywords": "fiskeri, KPI, rapport",
-            },
-            close=True,   # free memory
-            tight=True,   # prevent label clipping
-        )
-
-        self.outTextEdit.append(f"Lagrer plot til {toPdfFile}")
-        QApplication.processEvents()
-
-        #createPdfDoc(toPdfFile, toPngFile + ".png")
-
-        if toCsvFile:
-            jsonDict = createJsonItem(this_kpiData, self.nVessels, self.periodArray, kpi_results)
-            createJson(jsonDict, toJsonFile)
-            json_to_csv(jsonDict, toCsvFile)
-
-        self.outTextEdit.append(f"Lagrer CSV til {toCsvFile} og JSON til {toJsonFile}\n")
-        QApplication.processEvents()
+    
 
     # -------------------------
     # Window close

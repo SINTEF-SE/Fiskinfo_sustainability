@@ -2,6 +2,7 @@
 
 from PySide6.QtCore import QDate
 import datetime
+from typing import List
 #from mpl_toolkits.axes_grid1.anchored_artists import AnchoredText
 
 # split catch location text into list of locations based on comma and line breaks
@@ -109,6 +110,10 @@ def noVessels(dict):
                        idList.append(v['fiskeridirVesselId'])
                       
         return len(idList)
+
+def norsk_length_group(lengthG: List[str]) -> str:
+    """Format Norwegian vessel length group label."""
+    return f"[{', '.join(nlg(lg) for lg in lengthG) if lengthG else 'Alle'}]"
 
 # Get the Norwegian name of specified length group
 def nlg(lg):

@@ -190,42 +190,42 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         """
         
     #-----------------------------------------------------------------------
-    # Define Lists for all the calculated data, the first value is the y-label for plot
+    # Define Lists for all the calculated data, the first value is the JSON key
     #-----------------------------------------------------------------------
-    myEeoiList =                ['EEOI']
-    refEeoiList =               ['refEEOI']
-    myFuiList =                 ['FUI']
-    refFuiList =                ['refFUI']
-    myCatchList =               ['Fangst [tonn]']
-    myCatchValueList =          ['Verdi [mill NOK]']
-    refCatchList =              ['Fangst [tonn]']
-    refCatchValueList =         ['Verdi [mill NOK]']
-    myFuelList =                ["Drivstoff [K Liter]"]
-    refFuelList =               ["Drivstoff [K liter]"]
-    myFuelCostList =            ["Drivstoffkostnad [mill NOK]"]
-    refFuelCostList =           ["DrivstoffKostnad [mill NOK]"]
-    myCO2PerTripList =          ['CO2 [tonn]']
-    refCO2PerTripList =         ['CO2 [tonn]']
-    myDistanceList =            ['Distanse [nm]']
-    refDistanceList =           ['Distanse [nm]']
-    myHoursList =               ['Timer']
-    refHoursList =              ['Timer']
-    weightPerTripList =         ['Fangst [tonn]']
-    refWeightPerTripList =      ['Fangst [tonn]']
-    catchValuePerTripList =     ['Verdi [mill NOK]']
-    refCatchValuePerTripList =  ['Verdi [mill NOK]']
-    daysPerTripList =           ['Dager']
-    refDaysPerTripList =        ['Dager']
-    fuelPerTripList =           ['Drivstoff [K liter]']
-    refFuelPerTripList =        ['Drivstoff [K liter]']
-    distancePerTripList =       ['Distanse [nm]']
-    refDistancePerTripList =    ['Distanse [nm]']
-    fuelCostPerTripList =       ['Drivstoffkostnad [mill NOK]']
-    refFuelCostPerTripList =    ['Drivstoffkostnad [mill NOK]']
-    myRevPerTonWeightList =     ['Netto fortjeneste per tonn fangst [1000 NOK]']
-    avRevPerTonWeightList =     ['Netto fortjeneste per tonn fangst [1000 NOK]']
-    myRevPerHourList =          ['Netto fortjeneste per time [1000 NOK]']
-    avRevPerHourList =          ['Netto fortjeneste per time [1000 NOK]']
+    myEeoiList =                ["EEOI"]
+    refEeoiList =               ["refEEOI"]
+    myFuiList =                 ["FUI"]
+    refFuiList =                ["refFUI"]
+    myCatchList =               ["Fangst"]
+    refCatchList =              ["refFangst"]
+    myCatchValueList =          ["FangstVerdi"]
+    refCatchValueList =         ["refFangstVerdi"]
+    myFuelList =                ["Drivstofforbruk"]
+    refFuelList =               ["refDrivstofforbruk"]
+    myFuelCostList =            ["Drivstoffkostnad"]
+    refFuelCostList =           ["refDrivstoffKostnad"]
+    myCO2PerTripList =          ["CO2utslippPerTur"]
+    refCO2PerTripList =         ["refCO2utslippPerTur"]
+    myDistanceList =            ["SeiltDistanse"]
+    refDistanceList =           ["refSeiltDistanse"]
+    myHoursList =               ["FiskeTimer"]
+    refHoursList =              ["refFiskeTimer"]
+    weightPerTripList =         ["FangstPerTur"]
+    refWeightPerTripList =      ["refFangstPerTur"]
+    catchValuePerTripList =     ["FangstVerdiPerTur"]
+    refCatchValuePerTripList =  ["refFangstVerdiPerTur"]
+    daysPerTripList =           ["DagerPerTur"]
+    refDaysPerTripList =        ["refDagerPerTur"]
+    fuelPerTripList =           ["DrivstofforbrukPerTur"]
+    refFuelPerTripList =        ["refDrivstofforbrukPerTur"]
+    distancePerTripList =       ["SeiltDistansePerTur"]
+    refDistancePerTripList =    ["refSeiltDistansePerTur"]
+    fuelCostPerTripList =       ["DrivstoffkostnadPerTur"]
+    refFuelCostPerTripList =    ["refDrivstoffkostnadPerTur"]
+    myRevPerTonWeightList =     ["NettoFortjenestePerTonnFangst"]
+    refRevPerTonWeightList =     ["refNettoFortjenestePerTonnFangst"]
+    myRevPerHourList =          ["NettoFortjenestePerTime"]
+    refRevPerHourList =          ["refNettoFortjenestePerTime"]
     
     i = 0
     for period in tripsArray:
@@ -354,9 +354,9 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         distancePerTripList.append(distancePerTrip / NM)                    # (meter -> nautisk mil)
         refDistancePerTripList.append(refDistancePerTrip / NM)              # (meter -> nautisk mil)
         myRevPerTonWeightList.append(revPerTonWeight)                       #(1000 NOK / tonn)
-        avRevPerTonWeightList.append(refRevPerTonWeight)                    #(1000 NOK / tonn)
+        refRevPerTonWeightList.append(refRevPerTonWeight)                    #(1000 NOK / tonn)
         myRevPerHourList.append(revPerHour / 1000)                          #(NOK → 1000 NOK)
-        avRevPerHourList.append(refRevPerHour / 1000)                       #(NOK → 1000 NOK)
+        refRevPerHourList.append(refRevPerHour / 1000)                       #(NOK → 1000 NOK)
         fuelCostPerTripList.append(fuelCostPerTrip / 1000 / 1000)           #(NOK → mill NOK)
         refFuelCostPerTripList.append(refFuelCostPerTrip /1000 / 1000)      #(NOK → mill NOK)
         i += 1
@@ -394,9 +394,9 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
     resultDict.update({"myFuiList":                 myFuiList})
     resultDict.update({"refFuiList":                refFuiList})
     resultDict.update({"myRevPerTonWeightList":     myRevPerTonWeightList})
-    resultDict.update({"avRevPerTonWeightList":     avRevPerTonWeightList})
+    resultDict.update({"refRevPerTonWeightList":    refRevPerTonWeightList})
     resultDict.update({"myRevPerHourList":          myRevPerHourList})
-    resultDict.update({"avRevPerHourList":          avRevPerHourList})
+    resultDict.update({"refRevPerHourList":         refRevPerHourList})
     resultDict.update({"fuelCostPerTripList":       fuelCostPerTripList})
     resultDict.update({"refFuelCostPerTripList":    refFuelCostPerTripList})
 
