@@ -6,10 +6,10 @@ from typing import Dict, Any, Optional, List
 
 import requests
 import pandas as pd
-from PySide6.QtCore import QDate
+from PySide6.QtCore import QObject, QDate, Signal
 
-from utility import getMonthTimestamps
-from PySide6.QtWidgets import QTextEdit
+#from utility import getMonthTimestamps
+import Endpoints as ep
 
 
 # ------------------------------------------------------------
@@ -24,8 +24,10 @@ logging.basicConfig(
 # ------------------------------------------------------------
 # Clean Datafangst API Client
 # ------------------------------------------------------------
-class DatafangstClient:
+class DatafangstClient(QObject):
+    progress = Signal(str)
     def __init__(self, token: Optional[str] = None, base_url: str = None):
+        super().__init__()
         """
         Initialize the API client.
 
@@ -33,7 +35,7 @@ class DatafangstClient:
         base_url  : Base API endpoint
         """
 
-        self.base_url = base_url or "https://api.dev.datafangst.orcalabs.no/"
+        self.base_url = base_url or ep.DATAFANGST_BASE_URL
 
         #self.token = token or os.environ.get("DATAFANGST_TOKEN")
         self.token = "dcyerkjerfklfvn"                                  # TESTING ONLY!!!
@@ -189,14 +191,17 @@ class DatafangstClient:
         except requests.exceptions.RequestException as e:
             if (resp.status_code == 404):
                 logging.error("This request requires authorization")
+                self.progress.emit("This request requires authorization")
             else:
                 logging.error(f"Request failed: {e}")
+                self.progress.emit(f"Request failed: {e}")
             return None
 
         try:
             data = resp.json()
         except json.JSONDecodeError:
             logging.error(f"Invalid JSON:\n{resp.text}")
+            self.progress.emit(f"Invalid JSON:\n{resp.text}")
             return None
 
         if csv_file:
@@ -210,9 +215,6 @@ class DatafangstClient:
             print("\n========== API RESULT ==========")
             print(json.dumps(data, indent=2, ensure_ascii=False))
             print("================================\n")
-
-            jsonText = json.dumps(data, indent=2, ensure_ascii=False)
-
 
         return data
 

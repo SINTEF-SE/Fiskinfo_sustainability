@@ -3,6 +3,7 @@
 from PySide6.QtCore import QObject, Signal
 from utility import getPeriodDates
 from KPI import getAllTripsInPeriods, getPricesInPeriod, kpiCalculations
+import Endpoints as ep
 
 class KPIWorker(QObject):
     finished = Signal(dict)
@@ -12,7 +13,6 @@ class KPIWorker(QObject):
     def __init__(self, kpiData):
         super().__init__()
         self.kpiData = kpiData
-        self.E_TRIPS = "v1.0/trips"
 
     def run(self):
         try:
@@ -21,7 +21,7 @@ class KPIWorker(QObject):
 
             self.progress.emit("Henter turer …")
             nVessels, tripsArray = getAllTripsInPeriods(
-                self.E_TRIPS, self.kpiData, periodArray
+                ep.E_TRIPS, self.kpiData, periodArray
             )
 
             self.progress.emit("Henter priser …")
@@ -34,8 +34,6 @@ class KPIWorker(QObject):
 
             self.finished.emit({
                 "periods": periodArray,
-                #"trips": tripsArray,
-                #"prices": priceList,
                 "kpi": kpi_results,
                 "nVessels": nVessels
             })

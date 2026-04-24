@@ -2,38 +2,22 @@
 # kpi_module.py
 from typing import List, Optional, Any, Dict, Mapping, MutableMapping, Iterable
 import json
-from collections import Counter
 import re
 from datetime import datetime, timezone
-
 from PySide6.QtCore import QDate
 from datafangst_client import DatafangstClient
+from Options import *
+import Endpoints as ep
 
 # Only import what you need from utility to avoid namespace clashes
-from utility import nlg, noVessels, findMainSpecie, getLengthGroups
+from utility import nlg, noVessels
 
-PRICE_DIFF = 5  # NOK: approx difference between autodiesel and MGO
 
 # --- Datafangst endpoints (same as your previous constants) ---
-E_AV_EEOI   = "v1.0/trip/benchmarks/average_eeoi"
-E_AV_FUI    = "v1.0/trip/benchmarks/average_fui"
-E_AVERAGE   = "v1.0/trip/benchmarks/average"
-E_TRIPS     = "v1.0/trips"
-
-# --- SSB PXWeb endpoint base (fixed &amp; -> &) ---
-SSB_PRICE_BASE = (
-    "https://data.ssb.no/api/pxwebapi/v2/tables/09654/data"
-    "?lang=no&valueCodes[PetroleumProd]=035&valueCodes[ContentsCode]=Priser&valueCodes[Tid]="
-)
-
-CO2_FACTOR = 2.66              # kg CO2 / liter drivstoff
-HOURS_IN_DAY = 24              # number of hours in a day
-NM = 1852                      # nautisk mil in meters
-
-_FORMATS = [
-    "%Y-%m-%dT%H:%M:%SZ",      # no fractional seconds
-    "%Y-%m-%dT%H:%M:%S.%fZ",   # with fractional seconds
-]
+#E_AV_EEOI   = "v1.0/trip/benchmarks/average_eeoi"
+#E_AV_FUI    = "v1.0/trip/benchmarks/average_fui"
+#E_AVERAGE   = "v1.0/trip/benchmarks/average"
+#E_TRIPS     = "v1.0/trips"
 
 
 # ---------------------------------------------------------------------
@@ -43,11 +27,7 @@ def _new_client() -> DatafangstClient:
     """Create a fresh API client (reads token from env if not passed)."""
     return DatafangstClient()
 
-def _norsk_length_group(lengthG: List[str]) -> str:
-    """Format Norwegian vessel length group label."""
-    return f"[{', '.join(nlg(lg) for lg in lengthG) if lengthG else 'Alle'}]"
-
-def _safe_get(d: Dict[str, Any], key: str, default: float = 0.0) -> float:
+def _safe_get_float(d: Dict[str, Any], key: str, default: float = 0.0) -> float:
     """Get numeric key safely from dict, coercing to float."""
     try:
         return float(d.get(key, default))
@@ -98,16 +78,6 @@ def _safe_get_dict(d: Mapping[str, Any], key: str, default: Optional[Dict[str, A
         return fallback
 
 
-def _safe_div(n: float, d: float, fallback: float = 0.0) -> float:
-    """Safe division with fallback when denominator is 0/None."""
-    return (n / d) if d else fallback
-
-def _ssb_price_url(start: QDate, end: QDate) -> str:
-    """Build SSB URL with the [range(YYYYMmm,YYYYMmm)] time selector."""
-    sY, sM = start.year(), start.month()
-    eY, eM = end.year(), end.month()
-    return SSB_PRICE_BASE + f"[range({sY}M{sM:02d},{eY}M{eM:02d})]"
-
 def _excludeTrips(myItems, allItems, sDate):
     #Convert sDat to string
     sDateString = sDate.toString("yyyy-MM-dd")
@@ -152,7 +122,7 @@ def _getTripHours(startString, endString):
 
 def _parse_utc_z_strptime(s: str) -> datetime:
     last_err = None
-    for fmt in _FORMATS:
+    for fmt in TIME_FORMATS:
         try:
             dt = datetime.strptime(s, fmt)
             return dt.replace(tzinfo=timezone.utc)
@@ -223,12 +193,11 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
     fuelCostPerTripList =       ["DrivstoffkostnadPerTur"]
     refFuelCostPerTripList =    ["refDrivstoffkostnadPerTur"]
     myRevPerTonWeightList =     ["NettoFortjenestePerTonnFangst"]
-    refRevPerTonWeightList =     ["refNettoFortjenestePerTonnFangst"]
+    refRevPerTonWeightList =    ["refNettoFortjenestePerTonnFangst"]
     myRevPerHourList =          ["NettoFortjenestePerTime"]
-    refRevPerHourList =          ["refNettoFortjenestePerTime"]
+    refRevPerHourList =         ["refNettoFortjenestePerTime"]
     
-    i = 0
-    for period in tripsArray:
+    for i, period in enumerate(tripsArray):
         sumWeight = 0
         sumPrice = 0
         sumFuel = 0
@@ -247,22 +216,22 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
 
         for tur in myTrip:
             delivery = _safe_get_dict(tur, 'delivery')
-            tripWeight = _safe_get(delivery, 'totalLivingWeight')
+            tripWeight = _safe_get_float(delivery, 'totalLivingWeight')
             sumWeight += tripWeight
-            sumPrice += _safe_get(delivery, 'totalPriceForFisher')
-            fuel = _safe_get(tur, 'fuelConsumption')
+            sumPrice += _safe_get_float(delivery, 'totalPriceForFisher')
+            fuel = _safe_get_float(tur, 'fuelConsumption')
             if (fuel == 0):
-                sumFuel += _safe_get(tur, 'fuelConsumptionEstimatedOnly')
+                sumFuel += _safe_get_float(tur, 'fuelConsumptionEstimatedOnly')
             else:
                 sumFuel += fuel
 
-            tripDistance = _safe_get(tur, 'distance')
+            tripDistance = _safe_get_float(tur, 'distance')
             sumDistance += tripDistance
             startString = _safe_get_string(tur, 'start')
             endString = _safe_get_string(tur, 'end')
             tripHours = _getTripHours(startString, endString)
             sumHours += tripHours
-            tripDistance = _safe_get(tur, 'distance')
+            tripDistance = _safe_get_float(tur, 'distance')
             sumWeightXdistance += tripWeight/1000*tripDistance/1852     # Aggregate over all tours
 
         eeoi = sumFuel*CO2_FACTOR/sumWeightXdistance*1000               #(kg CO2 / (ton*nm) → g CO2 / (ton*nm))
@@ -287,16 +256,16 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         noAllTrips = len(allTrips)
         for tur in allTrips:
             delivery = _safe_get_dict(tur, 'delivery')
-            tripRefWeight = _safe_get(delivery, 'totalLivingWeight')
+            tripRefWeight = _safe_get_float(delivery, 'totalLivingWeight')
             sumRefWeight += tripRefWeight
-            sumRefPrice += _safe_get(delivery, 'totalPriceForFisher')
-            refFuel = _safe_get(tur, 'fuelConsumption')
+            sumRefPrice += _safe_get_float(delivery, 'totalPriceForFisher')
+            refFuel = _safe_get_float(tur, 'fuelConsumption')
             if (refFuel == 0):
-                sumRefFuel += _safe_get(tur, 'fuelConsumptionEstimatedOnly')
+                sumRefFuel += _safe_get_float(tur, 'fuelConsumptionEstimatedOnly')
             else:
                 sumRefFuel += refFuel
 
-            tripRefDistance = _safe_get(tur, 'distance')
+            tripRefDistance = _safe_get_float(tur, 'distance')
             sumRefDistance += tripRefDistance
             startString = _safe_get_string(tur, 'start')
             endString = _safe_get_string(tur, 'end')
@@ -311,7 +280,7 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         refRevPerHour = (sumRefPrice - refFuelCost) / sumRefHours
         refFuelCostPerTrip = refFuelCost / noAllTrips           # average over all trips  
         
-        refFuelCost = sumRefFuel * priceList[i] / len(gd.vesselRefIds)  # average over all trips
+        refFuelCost = sumRefFuel * priceList[i] / len(ID_REF_VESSELS)  # average over all trips
         refFuelPerTrip = sumRefFuel/noAllTrips                  # average over all trips
         refPricePerTrip = sumRefPrice / noAllTrips              # average over all trips
         refDaysPerTrip = sumRefHours/HOURS_IN_DAY/noAllTrips    # average over all trips
@@ -320,9 +289,9 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         refWeightPerTrip = sumRefWeight / noAllTrips            # average over all trips
         # må sjekkes
          
-        sumRefWeight = sumRefWeight / len(gd.vesselRefIds)      #Average over all vessels in ref group
-        sumRefPrice = sumRefPrice / len(gd.vesselRefIds)        #Average over all vessels in ref group
-        sumRefFuel = sumRefFuel / len(gd.vesselRefIds)          #Average over all vessels in ref group
+        sumRefWeight = sumRefWeight / len(ID_REF_VESSELS)      #Average over all vessels in ref group
+        sumRefPrice = sumRefPrice / len(ID_REF_VESSELS)        #Average over all vessels in ref group
+        sumRefFuel = sumRefFuel / len(ID_REF_VESSELS)          #Average over all vessels in ref group
 
        
         myEeoiList.append(eeoi)                 
@@ -359,7 +328,6 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         refRevPerHourList.append(refRevPerHour / 1000)                       #(NOK → 1000 NOK)
         fuelCostPerTripList.append(fuelCostPerTrip / 1000 / 1000)           #(NOK → mill NOK)
         refFuelCostPerTripList.append(refFuelCostPerTrip /1000 / 1000)      #(NOK → mill NOK)
-        i += 1
 
 
     #--------------------------------------------------------------
@@ -436,7 +404,7 @@ def getAllTripsInPeriods(endpoint: str, gd: List[Dict[str, Any]], periodArray: L
                 endpoint, sDate=sDate, eDate=dateTuple[1],
                 vesselGroups=gd.lengthG, gearGroups=gd.gearG,
                 speciesGroups=gd.specG, locationGroups=gd.locG,
-                vesselId = gd.vesselId, limit = page_size, offset = offset
+                vesselId = ID_MY_VESSEL, limit = page_size, offset = offset
             ) or {}
             
             if not page or not isinstance(page, list):
@@ -460,7 +428,7 @@ def getAllTripsInPeriods(endpoint: str, gd: List[Dict[str, Any]], periodArray: L
                 endpoint, sDate=sDate, eDate=dateTuple[1],
                 vesselGroups=gd.lengthG, gearGroups=gd.gearG,
                 speciesGroups=gd.specG, locationGroups=gd.locG,
-                vesselId = gd.vesselRefIds,  # reference group
+                vesselId = ID_REF_VESSELS,  # reference group
                 limit = page_size, offset = offset
             ) or {}
 
@@ -491,7 +459,8 @@ def getPricesInPeriod(periodArray):
         # SSB price for the month of sDate
         sDate=dateTuple[0]
         eDate=dateTuple[1]
-        ssb_url = _ssb_price_url(sDate, eDate)
+        #ssb_url = _ssb_price_url(sDate, eDate)
+        ssb_url =ep.build_ssb_url(ep.SSB_PRICE_BASE, sDate, eDate)
         ssb = ssb_client.request(endpoint=ssb_url, auth=False) or {}
         price_values = ssb.get('value') if isinstance(ssb, dict) else None
         price = (price_values[0] if price_values else 0) - PRICE_DIFF

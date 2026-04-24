@@ -1,67 +1,29 @@
 
 from PySide6.QtWidgets import (
-    QMainWindow, QToolBar, QCheckBox, QWidget, QPushButton, QApplication, QLabel, QStatusBar,
+    QMainWindow, QToolBar, QCheckBox, QWidget, QPushButton, QLabel,
     QDateEdit, QLineEdit, QTextEdit, QMessageBox, QSizePolicy, QHBoxLayout, QFormLayout, QVBoxLayout
 )
-from PySide6.QtGui import QAction, QIcon, QPalette
-from PySide6.QtCore import QSize, QDate, Qt, QThread, QTimer
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtCore import QSize, QDate, Qt, QThread
 from dataclasses import dataclass
-
+import json
 from gui_helpers import MultiComboBox
-from ssb_client import build_ssb_url
-from reports import *
-from KPI import kpiCalculations, getAllTripsInPeriods, getPricesInPeriod
 from datafangst_client import DatafangstClient
-from utility import getLengthGroups, getGearGroups, splitCatchLocation, getPeriodDates, norsk_length_group
-from plot_helpers import plot, save_figs_to_pdf
+from utility import getLengthGroups, getGearGroups, splitCatchLocation, norsk_length_group
 from plots import createPlots
 from datetime import datetime
-import ast
 from kpi_worker import KPIWorker
+from Options import *
+import Endpoints as ep
 
 
 
 #--------------------------
-# appIcon
+# app constants
 #--------------------------
 APP_ICON = 'sustainable-icon.png'
-
 APP_TITLE = "FiskInfoPlattformen Bærekraftsmodul"
 
-# -------------------------
-# Vessel IDs
-# -------------------------
-ID_MY_VESSEL        = 2013063493  # Gadus Njord
-ID_REF_VESSELS      = [1999001513, 2011054408, 2018101213, 2000013339, 2013063493]        # Nordland Havfiske
-#ID_REF_VESSELS      = []
-
-#-------------------------
-# Output files directory
-#-------------------------
-OUTDIR = 'output/'
-
-# -------------------------
-# Endpoint constants
-# -------------------------
-E_GEAR               = "v1.0/gear"
-E_GEAR_GROUPS        = "v1.0/gear_groups"
-E_GEAR_MAIN_GROUPS   = "v1.0/gear_main_groups"
-
-E_SPECIES            = "v1.0/species"
-E_USER               = "v1.0/user"
-
-E_VESSELS            = "v1.0/vessels"
-E_VESSEL_FUEL        = "v1.0/vessel/fuel"
-E_VESSEL_LIVE_FUEL   = "v1.0/vessel/live_fuel"
-E_VESSEL_BENCHMARKS  = "v1.0/vessels/benchmarks"
-
-E_TRIPS              = "v1.0/trips"
-E_HAULS              = "v1.0/hauls"
-
-E_TRIP_AVG           = "v1.0/trip/benchmarks/average"
-E_AVG_EEOI           = "v1.0/trip/benchmarks/average_eeoi"
-E_AVG_FUI            = "v1.0/trip/benchmarks/average_fui"
-E_EEOI               = "v1.0/trip/benchmarks/eeoi"
 
 # -------------------------
 # Group constants
@@ -101,20 +63,16 @@ bg_mainwindow = "#FFFFFFFF"
 api_text = "#061EA8"
 
 
-
-def safe_int(text: str, default: int = 0) -> int:
+def _safe_int(text: str, default: int = 0) -> int:
     try:
         return int(text)
     except Exception:
         return default
     
 
-
 @dataclass(frozen=True)
-class KPIData:
+class GUIData:
     endDate: QDate
-    vesselId: int
-    vesselRefIds: list[int]
     lengthG: list[str]
     gearG: list[str]
     specG: list[str]
@@ -143,8 +101,6 @@ class MainWindow(QMainWindow):
         # -------------------------
         # Basic state
         # -------------------------
-        self.vesselId = ID_MY_VESSEL
-        self.vesselRefIds = ID_REF_VESSELS
         self.inputHasChanged = True
         self.nVessels = 0
         self.actionText = ""
@@ -155,13 +111,9 @@ class MainWindow(QMainWindow):
         self.periodArray = []
         self.tripsArray = []
         self.figList = []
-        self.toCsvFile = "output/kpi_Report.csv" #if self.storeCsv.isChecked() else ""
-        self.toJsonFile = "output/kpi_Report.json"
-        self.toPdfFile = "output/kpi_Report.pdf"
 
         self._busy = False
-        # Shared client
-        self.client = DatafangstClient()
+        
 
     
 #                           WINDOW LAYOUT                              
@@ -212,7 +164,8 @@ class MainWindow(QMainWindow):
         # --------------------------------------------------------
         self.outTextEdit = QTextEdit()
         self.outTextEdit.setStyleSheet(f"QTextEdit {{ background-color: {bg_outText}; color: black; }}")
-        self.outTextEdit.setMinimumHeight(500)
+        self.outTextEdit.setMinimumHeight(300)
+        self.outTextEdit.setMinimumWidth(600)
         vbox.addWidget(self.outTextEdit)
 
         # --------------------------------------------------------
@@ -548,6 +501,9 @@ class MainWindow(QMainWindow):
         pef_action.triggered.connect(self.pef_button_clicked)
         pef_menu.addAction(pef_action)
 
+        # shared client
+        self.client = DatafangstClient(self)
+        self.client.progress.connect(self.outTextEdit.append)
 
     # -------------------------
     # Change tracking
@@ -565,13 +521,20 @@ class MainWindow(QMainWindow):
     def isInputChanged(self) -> bool:
         return self.inputHasChanged
     
-   ################################FIX#########################################################
+    # -------------------------
+    # Printout to the textEditBox
+    # -------------------------
     def printout(self, response):
-        if self.infoOutput.isChecked():
-            #myText = ast.literal_eval(response.__str__())
-            jsonParsed = json.dumps(response.json(), indent = 4)
-            self.outTextEdit.append(jsonParsed)
-            self.outTextEdit.append("")
+        if self.infoOutput.isChecked(): 
+            pretty = json.dumps(
+                response,
+                indent=4,
+                ensure_ascii=False
+            )
+            self.outTextEdit.append("======= API RESULT ======")
+            self.outTextEdit.append(pretty)
+            self.outTextEdit.append("=========================\n")
+
 
     # -------------------------
     # API Button Handlers
@@ -579,19 +542,18 @@ class MainWindow(QMainWindow):
     def getGear_button_clicked(self):
         toCsvFile = "output/gear.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_GEAR,
+            ep.E_GEAR,
             auth=False,  # public
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
             append_csv=self.appendCsv.isChecked()
         )
-
         self.printout(response)
 
     def getGearGroups_button_clicked(self):
         toCsvFile = "output/gearGroups.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_GEAR_GROUPS,
+            ep.E_GEAR_GROUPS,
             auth=False,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
@@ -602,7 +564,7 @@ class MainWindow(QMainWindow):
     def getGearMainGroups_button_clicked(self):
         toCsvFile = "output/gearMainGroups.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_GEAR_MAIN_GROUPS,
+            ep.E_GEAR_MAIN_GROUPS,
             auth=False,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
@@ -613,7 +575,7 @@ class MainWindow(QMainWindow):
     def getVessels_button_clicked(self):
         toCsvFile = "output/vessels.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_VESSELS,
+            ep.E_VESSELS,
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
@@ -624,7 +586,7 @@ class MainWindow(QMainWindow):
     def getVesselsFuel_button_clicked(self):
         toCsvFile = "output/vesselsFuel.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_VESSEL_FUEL,
+            ep.E_VESSEL_FUEL,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
             auth=True,
@@ -637,7 +599,7 @@ class MainWindow(QMainWindow):
     def getVesselsLiveFuel_button_clicked(self):
         toCsvFile = "output/vesselsLiveFuel.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_VESSEL_LIVE_FUEL,
+            ep.E_VESSEL_LIVE_FUEL,
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
@@ -648,7 +610,7 @@ class MainWindow(QMainWindow):
     def getVesselsBenchmarks_button_clicked(self):
         toCsvFile = "output/benchmarks.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_VESSEL_BENCHMARKS,
+            ep.E_VESSEL_BENCHMARKS,
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
@@ -659,7 +621,7 @@ class MainWindow(QMainWindow):
     def getUser_button_clicked(self):
         toCsvFile = "output/user.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_USER,
+            ep.E_USER,
             auth=True,
             print_out=self.infoOutput.isChecked(),
             csv_file=toCsvFile,
@@ -673,10 +635,10 @@ class MainWindow(QMainWindow):
         vesselId = self.vesselId if self.myVessel.isChecked() else None
 
         response = self.client.get(
-            E_TRIPS,
+            ep.E_TRIPS,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
-            limit=safe_int(self.limitEdit.text(), 100),
+            limit=_safe_int(self.limitEdit.text(), 100),
             #offset=safe_int(self.offsetEdit.text(), 0),
             offset = 0,
             gearGroups=getGearGroups(self.gearCombo.checked_items_data()),
@@ -693,7 +655,7 @@ class MainWindow(QMainWindow):
         toCsvFile = "output/avTripBenchmarks.csv" if self.storeCsv.isChecked() else ""
         vesselId = self.vesselId if self.myVessel.isChecked() else None
         response = self.client.get(
-            E_TRIP_AVG,
+            ep.E_TRIP_AVG,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
             gearGroups=getGearGroups(self.gearCombo.checked_items_data()),
@@ -708,7 +670,7 @@ class MainWindow(QMainWindow):
     def getEEOI_button_clicked(self):
         toCsvFile = "output/EEOI.csv" if self.storeCsv.isChecked() else ""
         response = self.client.get(
-            E_EEOI,
+            ep.E_EEOI,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
             auth=True,
@@ -724,7 +686,7 @@ class MainWindow(QMainWindow):
         vesselId = self.vesselId if self.myVessel.isChecked() else None
 
         response = self.client.get(
-            E_AVG_EEOI,
+            ep.E_AVG_EEOI,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
             gearGroups=getGearGroups(self.gearCombo.checked_items_data()),
@@ -743,7 +705,7 @@ class MainWindow(QMainWindow):
         vesselId = self.vesselId if self.myVessel.isChecked() else None
 
         response = self.client.get(
-            E_HAULS,
+            ep.E_HAULS,
             sDate=self.startDate,
             eDate=self.stopDateEdit.date(),
             gearGroups=getGearGroups(self.gearCombo.checked_items_data()),
@@ -761,7 +723,7 @@ class MainWindow(QMainWindow):
     def getPrice_button_clicked(self):
         """SSB fuel price (public, no auth)."""
         toCsvFile = "output/price.csv" if self.storeCsv.isChecked() else ""
-        url = build_ssb_url(self.startDate, self.stopDateEdit.date())
+        url = ep.build_ssb_url(ep.SSB_PRICE_BASE, self.startDate, self.stopDateEdit.date())
 
         response = self.client.request(
             endpoint=url,
@@ -773,17 +735,16 @@ class MainWindow(QMainWindow):
         self.printout(response)
 
     # -------------------------
-    # Auth / Sustainability placeholders
+    # Pef button placeholders
     # -------------------------
     
     def pef_button_clicked(self):
         QMessageBox.information(self, "PEF", "Ikke implementert ennå.")
 
     # -------------------------
-    # KPI menu handlers
+    # KPI calculate button handler
     # -------------------------
     def kpi_button_clicked(self):
-
         # Get CheckBox states
         self.myCheckBoxes = checkBoxes(
             self.eeoi.isChecked(),
@@ -807,10 +768,8 @@ class MainWindow(QMainWindow):
 
             self.outTextEdit.append("Starter KPI-beregning…")
             # Build KPI input
-            self.this_kpiData = KPIData(
+            self.this_GUIData = GUIData(
                 endDate=self.stopDateEdit.date(),
-                vesselId=self.vesselId,
-                vesselRefIds=self.vesselRefIds,
                 lengthG=getLengthGroups(self.vesselCombo.checked_items_data()),
                 gearG=getGearGroups(self.gearCombo.checked_items_data()),
                 specG=self.speciesCombo.checked_items_data(),
@@ -821,7 +780,7 @@ class MainWindow(QMainWindow):
 
             # Start worker thread
             self._kpiThread = QThread()
-            self._kpiWorker = KPIWorker(self.this_kpiData)
+            self._kpiWorker = KPIWorker(self.this_GUIData)
 
             self._kpiWorker.moveToThread(self._kpiThread)
 
@@ -840,12 +799,12 @@ class MainWindow(QMainWindow):
         # If no change in input parameters, just plot results
         else:
             today = datetime.today().strftime('%d-%m-%Y')
-            norskLgroup = norsk_length_group(self.this_kpiData.lengthG)
-            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}, Dato: {today}").format(vGroup=norskLgroup, gGroup=self.this_kpiData.gearG, today=today)
-            createPlots(self.KpiResults, self.this_kpiData, text, self.myCheckBoxes, self.toPdfFile, self.toJsonFile, self.toCsvFile)
-            self.outTextEdit.append(f"PLOT:   --->   {self.toPdfFile}")
-            self.outTextEdit.append(f"JSON:   --->   {self.toJsonFile}")
-            self.outTextEdit.append(f"CSV :    --->   {self.toCsvFile}\n")
+            norskLgroup = norsk_length_group(self.this_GUIData.lengthG)
+            text = ("Lengdegruppe {vGroup}, Redskap {gGroup}, Dato: {today}").format(vGroup=norskLgroup, gGroup=self.this_GUIData.gearG, today=today)
+            createPlots(self.KpiResults, self.this_GUIData, text, self.myCheckBoxes, PDF_FILE, JDSON_FILE, CSV_FILE)
+            self.outTextEdit.append(f"PLOT:   --->   {PDF_FILE}")
+            self.outTextEdit.append(f"JSON:   --->   {JDSON_FILE}")
+            self.outTextEdit.append(f"CSV :    --->   {CSV_FILE}\n")
       
             
     def on_kpi_finished(self, result):
@@ -856,12 +815,12 @@ class MainWindow(QMainWindow):
         self.setInputChanged(False)
         self.KpiResults = result
         today = datetime.today().strftime('%d-%m-%Y')
-        norskLgroup = norsk_length_group(self.this_kpiData.lengthG)
-        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}, Dato: {today}").format(vGroup=norskLgroup, gGroup=self.this_kpiData.gearG, today=today)
-        createPlots(self.KpiResults, self.this_kpiData, text, self.myCheckBoxes, self.toPdfFile, self.toJsonFile, self.toCsvFile)
-        self.outTextEdit.append(f"PLOT:   --->   {self.toPdfFile}")
-        self.outTextEdit.append(f"JSON:   --->   {self.toJsonFile}")
-        self.outTextEdit.append(f"CSV :    --->   {self.toCsvFile}\n")
+        norskLgroup = norsk_length_group(self.this_GUIData.lengthG)
+        text = ("Lengdegruppe {vGroup}, Redskap {gGroup}, Dato: {today}").format(vGroup=norskLgroup, gGroup=self.this_GUIData.gearG, today=today)
+        createPlots(self.KpiResults, self.this_GUIData, text, self.myCheckBoxes, PDF_FILE, JDSON_FILE, CSV_FILE)
+        self.outTextEdit.append(f"PLOT:   --->   {PDF_FILE}")
+        self.outTextEdit.append(f"JSON:   --->   {JDSON_FILE}")
+        self.outTextEdit.append(f"CSV :    --->   {CSV_FILE}\n")
         
         
     def on_kpi_error(self, message):

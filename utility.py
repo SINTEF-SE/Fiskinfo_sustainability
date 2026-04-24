@@ -1,7 +1,7 @@
 
 
-from PySide6.QtCore import QDate
-import datetime
+#from PySide6.QtCore import QDate
+#import datetime
 from typing import List
 #from mpl_toolkits.axes_grid1.anchored_artists import AnchoredText
 
@@ -15,14 +15,14 @@ def splitCatchLocation(field_text):
     return c_locs
 
 # If the group array is empty, return an array with "Alle" for the title plot
-def emptyArrToAlle(arrgroup):
+'''def emptyArrToAlle(arrgroup):
     if len(arrgroup) == 0:
         return ["Alle"]
     else:
-        return arrgroup
+    	return arrgroup'''
 
 # Get a group of months date between two dates for the haul API
-def getMonthTimestamps(start_qdate, end_qdate):
+'''def getMonthTimestamps(start_qdate, end_qdate):
     """
     Returns a list of UTC (Zulu) timestamps in milliseconds for each month between start_qdate and end_qdate (inclusive).
     """
@@ -33,10 +33,10 @@ def getMonthTimestamps(start_qdate, end_qdate):
         dt = datetime.datetime(current.year(), current.month(), current.day(), tzinfo=datetime.timezone.utc)
         timestamps.append(dt.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z')
         current = current.addMonths(1)
-    return timestamps
+    return timestamps'''
 
 # Get a list of end dates based on enddate, aggregated number of months and number of periods in calulations
-def getDatesArray(gd):
+'''def getDatesArray(gd):
         endDateArray = []   # holds the end dates for all requests
         startDateArray = [] # holds the start dates for all requests
         dateArray = []
@@ -50,7 +50,7 @@ def getDatesArray(gd):
         dateArray.append(startDateArray)
         dateArray.append(endDateArray)  
 
-        gd.datesArray = dateArray
+        gd.datesArray = dateArray'''
 
 
 
@@ -81,7 +81,7 @@ def getPeriodDates(gd):
         return periodArray
 
 
-def monthsBetweenQdates(start_date, end_date) -> int:
+'''def monthsBetweenQdates(start_date, end_date) -> int:
     """
     Calculates the number of calendar months between two QDate objects.
     This method provides a more accurate count of full and partial months spanned.
@@ -99,18 +99,21 @@ def monthsBetweenQdates(start_date, end_date) -> int:
         if current_date > end_date and current_date.day() != end_date.day() and current_date.month() == end_date.month():
             # If we've passed the end_date but are in the same month, we still count that month
             break 
-    return months -1 # Subtract 1 because the loop counts the starting month as well
+    return months -1 # Subtract 1 because the loop counts the starting month as well'''
 
 
 
 def noVessels(dict):      
-        idList = []
-        for v in dict:
-                if (v['fiskeridirVesselId'] not in idList):
-                       idList.append(v['fiskeridirVesselId'])
-                      
-        return len(idList)
+	idList = []
+	for v in dict:
+		if (v['fiskeridirVesselId'] not in idList):
+			idList.append(v['fiskeridirVesselId'])
+					
+	return len(idList)
 
+#--------------------------------------------------------------
+# Translate vessel groups to norwegian
+#--------------------------------------------------------------
 def norsk_length_group(lengthG: List[str]) -> str:
     """Format Norwegian vessel length group label."""
     return f"[{', '.join(nlg(lg) for lg in lengthG) if lengthG else 'Alle'}]"
@@ -125,23 +128,24 @@ def nlg(lg):
                 case 'TwentyTwoToTwentyEight': return '22-28 m'
                 case 'TwentyEightAndAbove': return '> 28 m'
 
-def findMainSpecie(dict):
-        idList = []
-        for v in dict:
-                #if (v['fiskeridirVesselId']['catches']['speciesGroupId'] not in idList):
-                hauls = v['hauls']
-                #print(hauls)
-                for w in hauls:                       
-                        catch = w['catches']
-                        #print(catch)
-                        for y in catch:
-                                specie = y['speciesGroupId']
-                                idList.append(specie)
+'''def findMainSpecie(dict):
+	idList = []
+	for v in dict:
+		#if (v['fiskeridirVesselId']['catches']['speciesGroupId'] not in idList):
+		hauls = v['hauls']
+		#print(hauls)
+		for w in hauls:                       
+			catch = w['catches']
+			#print(catch)
+			for y in catch:
+				specie = y['speciesGroupId']
+				idList.append(specie)		
+	# print (idList)
+	return idList'''
 
-                
-       # print (idList)
-        return idList
-
+#----------------------------------------------------------------
+# Translate norwegian length groups to english for the API calls
+#----------------------------------------------------------------
 def getLengthGroups(lengthG):
       df_lengthG = []
       
@@ -154,6 +158,9 @@ def getLengthGroups(lengthG):
 
       return df_lengthG
 
+#----------------------------------------------------------------
+# Translate norwegian gear groups to english for the API calls
+#----------------------------------------------------------------
 def getGearGroups(gearG):
       df_gearG = []
       

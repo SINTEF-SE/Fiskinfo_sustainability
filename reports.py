@@ -1,7 +1,7 @@
 
 import json
 import logging
-#import pdfExt
+from Options import*
 
 #--------------------------------------------
 # Helpers
@@ -45,7 +45,7 @@ def createJsonItem(kpi_data, nVessels, periodArray, dataList):
     #print(dataList)
     # ---- Static vessel metadata ----
     data = {
-        "vesselName": kpi_data.vesselId,
+        "vesselName": ID_MY_VESSEL,
         "callSign": "",
         "numberOfRefVessels": nVessels,
         "group": kpi_data.lengthG,
