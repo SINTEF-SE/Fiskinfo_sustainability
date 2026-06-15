@@ -75,10 +75,18 @@ def plot(x, y11, y21 = None, title = None, yLabel = None, text = None, label = N
 
     for bar in mBars:
         height = bar.get_height()
+        
+        if abs(height) >= 100:
+                label = f"{height:.0f}"
+        elif abs(height) >= 1:
+                label = f"{height:.1f}"
+        else:
+                label = f"{height:.2f}"
+
         ax.text(
             bar.get_x() + bar.get_width()/2,    # x-position (center of bar)
             height,                             # y-position (top of bar)
-            f"{height:.1f}",                    # text (formatted)
+            label,                    # text (formatted)
             ha='center', va='bottom',           # text alignment
             fontsize=10                         # override base font size
         )
@@ -86,10 +94,18 @@ def plot(x, y11, y21 = None, title = None, yLabel = None, text = None, label = N
     if y21 is not None:
         for bar in aBars:
             height = bar.get_height()
+
+            if abs(height) >= 100:
+                label = f"{height:.0f}"
+            elif abs(height) >= 1:
+                label = f"{height:.1f}"
+            else:
+                label = f"{height:.2f}"
+
             ax.text(
                 bar.get_x() + bar.get_width()/2,    # x-position (center of bar)
                 height,                             # y-position (top of bar)
-                f"{height:.1f}",                    # text (formatted)
+                label,                    # text (formatted)
                 ha='center', va='bottom',           # text alignment
                 fontsize=10                         # override base font size
             )

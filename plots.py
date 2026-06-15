@@ -1,4 +1,3 @@
-from datetime import datetime
 from plot_helpers import save_figs_to_pdf, plot
 from reports import createJsonItem, createJson, json_to_csv
 from Options import*
@@ -32,9 +31,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
     for i in periodArray:
         endDateList.append(i[1])
 
-    #######################################
+    #--------------------------------------
     # Plot EEOI per periode
-    #######################################
+    #--------------------------------------
     if checkBox.eeoi:
         toPngFile = OUTDIR + "eeoi"
         title = ("EEOI aggregert over {months} måneder\n\n").format(months=span)    # Add \n\n to push the title upwards
@@ -55,9 +54,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refEeoiList"]) 
 
-    #######################################
+    #------------------------------------
     # Plot FUI per periode
-    #######################################
+    #------------------------------------
     if checkBox.fui:
         toPngFile = OUTDIR + "fui"
         title = ("FUI aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
@@ -78,9 +77,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refFuiList"]) 
 
-    #######################################
+    #------------------------------------
     # Plot total Fangst per periode
-    #######################################
+    #------------------------------------
     if checkBox.catch:
         toPngFile = OUTDIR + "fangst"
         title = ("Fangst aggregert over {months} måneder\n\n").format(months=span)      # Add \n\n to push the title upwards
@@ -101,9 +100,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refCatchList"]) 
     
-    ########################################
+    #------------------------------------
     # Plot gjennomsnittlig Fangst per tur
-    ########################################
+    #------------------------------------
         toPngFile = OUTDIR + "fangstPerTur"
         title = ("Gj. snittlig fangst per tur, {months} mnd perioder\n\n").format(months=span)      # Add \n\n to push the title upwards
         yLabel = "Tonn"
@@ -124,9 +123,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
             jsonCsvDataList.append(kpi_results["refWeightPerTripList"]) 
 
 
-    #######################################
+    #------------------------------------
     # Plot total Fangstverdi per periode
-    #######################################
+    #------------------------------------
         toPngFile = OUTDIR + "fangstVerdi"
         title = ("Fangstverdi aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
         yLabel = "mill. NOK"
@@ -147,9 +146,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
             jsonCsvDataList.append(kpi_results["refCatchValueList"]) 
         
     
-    ############################################
+    #-----------------------------------------
     # Plot gjennomsnittlig Fangstverdi per tur
-    ############################################
+    #-----------------------------------------
         toPngFile = OUTDIR + "fangstVerdiPerTur"
         title = ("Gj. snittlig fangstverdi per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
         yLabel = "mill. NOK"
@@ -169,9 +168,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refCatchValuePerTripList"]) 
 
-    ########################################
+    #-----------------------------------------
     # Plot Drivstofforbruk per periode
-    ########################################
+    #-----------------------------------------
     if checkBox.fuel:
         toPngFile = OUTDIR + "bunkersForbruk"
         title = ("Drivstofforbruk aggregert over {months} måneder\n\n").format(months=span)     # Add \n\n to push the title upwards
@@ -192,9 +191,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refFuelList"]) 
     
-        ##############################################
-    # Plot gjennomsnittlig drivstofforbruk per tur
-    ###############################################
+        #-----------------------------------------
+        # Plot gjennomsnittlig drivstofforbruk per tur
+        #-----------------------------------------
         toPngFile = OUTDIR + "bunkersPerTur"
         title = ("Gj. snittlig drivstofforbruk per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
         yLabel = "1000 liter"
@@ -214,9 +213,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refFuelPerTripList"]) 
 
-    #######################################
+    #-----------------------------------------
     # Plot Drivstoffkostnad per periode
-    #######################################
+    #-----------------------------------------
     if checkBox.fuelcost:
         toPngFile = OUTDIR + "bunkersKostnad"
         title = ("Drivstoffkostnad aggregert over {months} måneder\n\n").format(months=span)        # Add \n\n to push the title upwards
@@ -237,9 +236,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refFuelCostList"]) 
 
-    ################################################
+    #-----------------------------------------
     # Plot gjennomsnittlig Drivstoffkostnad per tur
-    ################################################
+    #-----------------------------------------
         toPngFile = OUTDIR + "bunkersKostnadPerTur"
         title = ("Gj. snittlig drivstoffkostnad per tur, {months} måneder\n\n").format(months=span)        # Add \n\n to push the title upwards
         yLabel = "mill. NOK"
@@ -259,14 +258,14 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refFuelCostPerTripList"]) 
 
-    ################################################################################
+    #--------------------------------------------------------------------------------
     # Plot gjennomsnittlig drivstoffkostnad for fangstaktive døgn, gj.snitt per tur
-    ################################################################################
+    #--------------------------------------------------------------------------------
     # Hva er fangstaktivt døgn?
 
-    ##############################################
+    #-----------------------------------------
     # Plot relativ fortjeneste per tonn drivstoff
-    ##############################################
+    #-----------------------------------------
     if checkBox.revenue:
         toPngFile = OUTDIR + "RelativFortjenestePerFangst"
         title = ("Relativ fortjeneste per tonn fangst, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards'
@@ -287,9 +286,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refRevPerTonWeightList"]) 
 
-    ##############################################
+    #-----------------------------------------
     # Plot relativ fortjeneste per time
-    ##############################################
+    #-----------------------------------------
         toPngFile = OUTDIR + "RelativFortjenestePerTime"
         title = ("Relativ fortjeneste per time, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
         yLabel = "1000 NOK"
@@ -309,9 +308,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refRevPerHourList"]) 
     
-    ############################################
+    #-----------------------------------------
     # Plot gjennomsnittlig CO2 per tur
-    ############################################
+    #-----------------------------------------
     if checkBox.co2:
         toPngFile = OUTDIR + "co2PerTur"
         title = ("Gj. snittlig CO2 utslipp per tur, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
@@ -332,9 +331,32 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refCO2PerTripList"]) 
 
-    ##############################################
+        #-----------------------------------------
+        # Plot total CO2 per tur
+        #-----------------------------------------
+        toPngFile = OUTDIR + "totalCo2Utslipp"
+        title = ("Totale CO2 utslipp i perioden, {months} mnd perioder\n\n").format(months=span)     # Add \n\n to push the title upwards
+        yLabel = "Tonn CO2"
+        
+        fig = plot_kpi(endDateList, 
+            kpi_results["totCO2List"], 
+            kpi_results.get("refTotCO2List"), 
+            title, 
+            yLabel,
+            nVessels,
+            text,
+            toPngFile,
+            checkBox.showRefG
+        )
+        figList.append(fig)
+        jsonCsvDataList.append(kpi_results["totCO2List"])
+        if checkBox.showRefG:
+            jsonCsvDataList.append(kpi_results["refTotCO2List"]) 
+
+
+    #-----------------------------------------
     # Plot gjennomsnittlig antall dager per tur
-    ##############################################
+    #-----------------------------------------
     if checkBox.dhd:
         toPngFile = OUTDIR + "dagerPerTur"
         title = ("Gj. snittlig antall dager per tur, {months} mnd perioder\n\n").format(months=span)        # Add \n\n to push the title upwards
@@ -355,9 +377,9 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refDaysPerTripList"]) 
 
-    ###############################################
-    # Plot gjennomsnittlig seilt distanse per tur
-    ###############################################
+        #-----------------------------------------
+        # Plot gjennomsnittlig seilt distanse per tur
+        #-----------------------------------------
         toPngFile = OUTDIR + "distansePerTur"
         title = ("Gj. snittlig seilt distanse per tur, {months} mnd perioder\n\n").format(months=span)      # Add \n\n to push the title upwards
         yLabel = "Nautiske mil"
@@ -377,10 +399,32 @@ def createPlots(result, kpiData, text, checkBox, toPdfFile, toJsonFile, toCsvFil
         if checkBox.showRefG:
             jsonCsvDataList.append(kpi_results["refDistancePerTripList"]) 
 
+    #-----------------------------------------
+    # Plot CO2 utslipp per salgsinntekt (VSME krav)
+    #-----------------------------------------
+    if checkBox.vsme:
+        toPngFile = OUTDIR + "UtslippPerSlagsinntekt"
+        title = ("Totale utslipp delt på salgsinntekt (VSME krav), {months} mnd perioder\n\n").format(months=span)        # Add \n\n to push the title upwards
+        yLabel = "CO2 / NOK"
+        
+        fig = plot_kpi(endDateList, 
+            kpi_results["myCO2PerRevenueList"], 
+            kpi_results.get("refCO2PerRevenueList"), 
+            title, 
+            yLabel,
+            nVessels,
+            text,
+            toPngFile,
+            checkBox.showRefG
+        )
+        figList.append(fig)
+        jsonCsvDataList.append(kpi_results["daysPerTripList"])
+        if checkBox.showRefG:
+            jsonCsvDataList.append(kpi_results["refDaysPerTripList"]) 
     
-    #################################################
+    #-----------------------------------------
     # Plot gjennomsnittlig aktive fisketimer per tur
-    #################################################
+    #-----------------------------------------
     # Finn start og stopp tid for alle hal på en tur og summer for å finne totaltid per tur
     # Legg sammen alle turer i perioden
 

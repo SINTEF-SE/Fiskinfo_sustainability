@@ -4,20 +4,11 @@ from typing import List, Optional, Any, Dict, Mapping, MutableMapping, Iterable
 import json
 import re
 from datetime import datetime, timezone
-from PySide6.QtCore import QDate
 from datafangst_client import DatafangstClient
 from Options import *
 import Endpoints as ep
 
-# Only import what you need from utility to avoid namespace clashes
-from utility import nlg, noVessels
-
-
-# --- Datafangst endpoints (same as your previous constants) ---
-#E_AV_EEOI   = "v1.0/trip/benchmarks/average_eeoi"
-#E_AV_FUI    = "v1.0/trip/benchmarks/average_fui"
-#E_AVERAGE   = "v1.0/trip/benchmarks/average"
-#E_TRIPS     = "v1.0/trips"
+from utility import noVessels
 
 
 # ---------------------------------------------------------------------
@@ -150,13 +141,8 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         It then calculates average values based on the number of vessels
         in gd.vesselRefIds.
 
-        Returns a dictionary with 6 Lists:
-        - myCatchList
-        - refCatchList
-        - myCatchValueList
-        - refCatchValueList
-        - myFuelList
-        - refFuelList
+        Returns a dictionary with 34 Lists as defined below
+    
         """
         
     #-----------------------------------------------------------------------
@@ -174,6 +160,8 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
     refFuelList =               ["refDrivstofforbruk"]
     myFuelCostList =            ["Drivstoffkostnad"]
     refFuelCostList =           ["refDrivstoffKostnad"]
+    totCO2List =                ["TotaleCO2utslipp"]
+    refTotCO2List =             ["refTotaleCO2utslipp"]
     myCO2PerTripList =          ["CO2utslippPerTur"]
     refCO2PerTripList =         ["refCO2utslippPerTur"]
     myDistanceList =            ["SeiltDistanse"]
@@ -196,12 +184,16 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
     refRevPerTonWeightList =    ["refNettoFortjenestePerTonnFangst"]
     myRevPerHourList =          ["NettoFortjenestePerTime"]
     refRevPerHourList =         ["refNettoFortjenestePerTime"]
+    myCO2PerRevenueList =       ["UtslippPerFortjeneste"]
+    refCO2PerRevenueList =      ["refUtslippPerFortjeneste"]
     
+    #------------------------------------------
+    # Calculate for all periods
+    #------------------------------------------
     for i, period in enumerate(tripsArray):
         sumWeight = 0
         sumPrice = 0
         sumFuel = 0
-        sumCO2 = 0
         sumDistance = 0  
         sumRefWeight = 0
         sumRefPrice = 0
@@ -214,6 +206,9 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         myTrip = period[0] 
         noMyTrips = len(myTrip)
 
+        #--------------------------------------------------
+        # Calculate for all trips and aggregate over period
+        #--------------------------------------------------
         for tur in myTrip:
             delivery = _safe_get_dict(tur, 'delivery')
             tripWeight = _safe_get_float(delivery, 'totalLivingWeight')
@@ -239,21 +234,24 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         fuelCost = sumFuel * priceList[i]                               # Total fuel cost in the period
         revPerTonWeight = (sumPrice - fuelCost) / sumWeight
         revPerHour = (sumPrice - fuelCost) / sumHours
+        totCO2 = sumFuel*CO2_FACTOR                             # Total Co2 in the period
+        CO2PerRevenue = totCO2 / sumPrice 
 
-
-        sumCO2 = sumFuel*CO2_FACTOR / noMyTrips                 # average over all trips
+        CO2PerTrip = sumFuel*CO2_FACTOR / noMyTrips             # average over all trips
         weightPerTrip = sumWeight / noMyTrips                   # average over all trips
         pricePerTrip = sumPrice / noMyTrips                     # average over all trips
         daysPerTrip = sumHours/HOURS_IN_DAY/noMyTrips           # average over all trips
         fuelPerTrip = sumFuel/noMyTrips                         # average over all trips
         distancePerTrip = sumDistance / noMyTrips               # average over all trips
         fuelCostPerTrip = fuelCost / noMyTrips                  # average over all trips
-        
-
                 
-        
         allTrips = period[1]
         noAllTrips = len(allTrips)
+
+
+        #-------------------------------------------------------------------
+        # Calculate for all reference group trips and aggregate over period
+        #-------------------------------------------------------------------
         for tur in allTrips:
             delivery = _safe_get_dict(tur, 'delivery')
             tripRefWeight = _safe_get_float(delivery, 'totalLivingWeight')
@@ -278,22 +276,25 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         ref_fui = sumRefFuel*CO2_FACTOR/sumRefWeight*1000               #(kg CO2 / ton → g CO2 / ton)  
         refRevPerTonWeight = (sumRefPrice - refFuelCost) / sumRefWeight
         refRevPerHour = (sumRefPrice - refFuelCost) / sumRefHours
-        refFuelCostPerTrip = refFuelCost / noAllTrips           # average over all trips  
         
-        refFuelCost = sumRefFuel * priceList[i] / len(ID_REF_VESSELS)  # average over all trips
-        refFuelPerTrip = sumRefFuel/noAllTrips                  # average over all trips
-        refPricePerTrip = sumRefPrice / noAllTrips              # average over all trips
-        refDaysPerTrip = sumRefHours/HOURS_IN_DAY/noAllTrips    # average over all trips
-        refDistancePerTrip = sumRefDistance / noAllTrips        # average over all trips
-        sumRefCO2 = sumRefFuel*CO2_FACTOR / noAllTrips          # average over all trips
-        refWeightPerTrip = sumRefWeight / noAllTrips            # average over all trips
-        # må sjekkes
+        refFuelCostPerTrip = refFuelCost / noAllTrips                   # average over all trips  
+        refFuelCost = sumRefFuel * priceList[i] / len(ID_REF_VESSELS)   # average over all trips
+        refFuelPerTrip = sumRefFuel/noAllTrips                          # average over all trips
+        refPricePerTrip = sumRefPrice / noAllTrips                      # average over all trips
+        refDaysPerTrip = sumRefHours/HOURS_IN_DAY/noAllTrips            # average over all trips
+        refDistancePerTrip = sumRefDistance / noAllTrips                # average over all trips
+        refCO2PerTrip = sumRefFuel*CO2_FACTOR / noAllTrips              # average over all trips
+        refWeightPerTrip = sumRefWeight / noAllTrips                    # average over all trips
          
-        sumRefWeight = sumRefWeight / len(ID_REF_VESSELS)      #Average over all vessels in ref group
-        sumRefPrice = sumRefPrice / len(ID_REF_VESSELS)        #Average over all vessels in ref group
-        sumRefFuel = sumRefFuel / len(ID_REF_VESSELS)          #Average over all vessels in ref group
+        refTotCO2 = sumRefFuel*CO2_FACTOR / len(ID_REF_VESSELS) #Average over all vessels in ref group
+        sumRefWeight = sumRefWeight / len(ID_REF_VESSELS)       #Average over all vessels in ref group
+        sumRefPrice = sumRefPrice / len(ID_REF_VESSELS)         #Average over all vessels in ref group
+        sumRefFuel = sumRefFuel / len(ID_REF_VESSELS)           #Average over all vessels in ref group
+        refCO2PerRevenue = refTotCO2 / sumRefPrice      
 
-       
+        #--------------------------------------------------
+        # Append all results to lists
+        #--------------------------------------------------
         myEeoiList.append(eeoi)                 
         refEeoiList.append(ref_eeoi)
         myFuiList.append(fui)     
@@ -306,8 +307,10 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         refFuelList.append(sumRefFuel / 1000)                               #(Liter → kLiter)
         myFuelCostList.append(fuelCost / 1000 / 1000)                       #(NOK → mill NOK)
         refFuelCostList.append(refFuelCost / 1000 / 1000)                   #(NOK → mill NOK)
-        myCO2PerTripList.append(sumCO2 / 1000)                              #(kg → tons)
-        refCO2PerTripList.append(sumRefCO2 / 1000)                          #(kg → tons)
+        myCO2PerTripList.append(CO2PerTrip / 1000)                          #(kg → tons)
+        refCO2PerTripList.append(refCO2PerTrip / 1000)                      #(kg → tons)
+        totCO2List.append(totCO2 / 1000)                                    #(kg → tons)
+        refTotCO2List.append(refTotCO2 / 1000)                              #(kg → tons)
         myDistanceList.append(sumDistance)
         refDistanceList.append(sumRefDistance)
         myHoursList.append(sumHours)
@@ -328,6 +331,8 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
         refRevPerHourList.append(refRevPerHour / 1000)                       #(NOK → 1000 NOK)
         fuelCostPerTripList.append(fuelCostPerTrip / 1000 / 1000)           #(NOK → mill NOK)
         refFuelCostPerTripList.append(refFuelCostPerTrip /1000 / 1000)      #(NOK → mill NOK)
+        myCO2PerRevenueList.append(CO2PerRevenue)
+        refCO2PerRevenueList.append(refCO2PerRevenue)
 
 
     #--------------------------------------------------------------
@@ -341,6 +346,8 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
     resultDict.update({"refFuelList":               refFuelList})
     resultDict.update({"myFuelCostList":            myFuelCostList})
     resultDict.update({"refFuelCostList":           refFuelCostList})
+    resultDict.update({"totCO2List":                totCO2List})
+    resultDict.update({"refTotCO2List":             refTotCO2List})
     resultDict.update({"myCO2PerTripList":          myCO2PerTripList})
     resultDict.update({"refCO2PerTripList":         refCO2PerTripList})
     resultDict.update({"myDistanceList":            myDistanceList})
@@ -367,6 +374,9 @@ def kpiCalculations(gd: List[Dict[str, Any]], tripsArray: List[Dict[str, Any]], 
     resultDict.update({"refRevPerHourList":         refRevPerHourList})
     resultDict.update({"fuelCostPerTripList":       fuelCostPerTripList})
     resultDict.update({"refFuelCostPerTripList":    refFuelCostPerTripList})
+    resultDict.update({"myCO2PerRevenueList":       myCO2PerRevenueList})
+    resultDict.update({"refCO2PerRevenueList":      refCO2PerRevenueList})
+
 
     return resultDict 
 

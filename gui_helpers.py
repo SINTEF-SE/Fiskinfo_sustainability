@@ -1,14 +1,8 @@
-from PySide6.QtCore import QModelIndex, Qt, QSize, QEvent
-from PySide6.QtGui import QStandardItem, QFontMetrics, QStandardItemModel, QPalette
-#from PySide6.QtWidgets import QComboBox, QStyledItemDelegate, QSizePolicy
+from PySide6.QtCore import QModelIndex, Qt, QSize
+from PySide6.QtGui import QStandardItem, QFontMetrics, QStandardItemModel
 from PySide6.QtWidgets import (
-    QApplication,
     QHBoxLayout,
     QLabel,
-    QMainWindow,
-    QStyle,
-    QToolButton,
-    QVBoxLayout,
     QWidget,
     QComboBox,
     QStyledItemDelegate, 

@@ -8,7 +8,6 @@ import requests
 import pandas as pd
 from PySide6.QtCore import QObject, QDate, Signal
 
-#from utility import getMonthTimestamps
 import Endpoints as ep
 
 

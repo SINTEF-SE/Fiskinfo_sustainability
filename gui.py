@@ -18,50 +18,6 @@ import Endpoints as ep
 
 
 
-#--------------------------
-# app constants
-#--------------------------
-APP_ICON = 'sustainable-icon.png'
-APP_TITLE = "FiskInfoPlattformen Bærekraftsmodul"
-
-
-# -------------------------
-# Group constants
-# -------------------------
-VESSEL_GROUPS = [
-    "Alle", "< 11 m", "11-15 m",
-    "15-21 m", "22-28 m", "> 28 m"
-]
-
-GEAR_GROUPS = [
-    "Alle", "Not", "Garn", "Krokredskap", "Teine",
-    "Trål", "Snurrevad", "Harpun", "Annet redskap", "Havbruk"
-]
-
-SPECIES_GROUPS = [
-    "Unknown", "Capelin", "NorwegianSpringSpawningHerring", "OtherHerring",
-    "Mackerel", "BlueWhiting", "NorwayPout", "Sandeels", "Argentines",
-    "EuropeanSpratSea", "EuropeanSpratCoast", "MesopelagicFish",
-    "TunaAndTunaishSpecies", "OtherPelagicFish", "AtlanticCod", "Haddock",
-    "Saithe", "Gadiformes", "GreenlandHalibut", "GoldenRedfish", "Wrasse",
-    "Wolffishes", "FlatFishOtherBottomFishAndDeepSeaFish", "SharkFish",
-    "SkatesAndOtherChondrichthyes", "QueenCrab", "EdibleCrab", "RedKingCrab",
-    "RedKingCrabOther", "NorthernPrawn", "AntarcticKrill",
-    "CalanusFinmarchicus", "OtherShellfishMolluscaAndEchinoderm",
-    "BrownSeaweed", "OtherSeaweed", "FreshWaterFish", "FishFarming",
-    "MarineMammals", "Seabird", "Other"
-]
-
-#-------------------------------
-# Colors for buttons and fields
-#-------------------------------
-bg_button = "#F1D014"
-bg_field = "#91E7F7"
-bg_outText = "#91E7F7"
-#bg_mainwindow = "#D3F1FD"
-bg_mainwindow = "#FFFFFFFF"
-api_text = "#061EA8"
-
 
 def _safe_int(text: str, default: int = 0) -> int:
     try:
@@ -90,6 +46,7 @@ class checkBoxes:
     revenue: bool
     co2: bool
     dhd: bool
+    vsme: bool
     showRefG: bool
     
 
@@ -163,7 +120,7 @@ class MainWindow(QMainWindow):
         # Add it to the vbox 2. row
         # --------------------------------------------------------
         self.outTextEdit = QTextEdit()
-        self.outTextEdit.setStyleSheet(f"QTextEdit {{ background-color: {bg_outText}; color: black; }}")
+        self.outTextEdit.setStyleSheet(f"QTextEdit {{ background-color: {BG_OUTTEXT_COL}; color: black; }}")
         self.outTextEdit.setMinimumHeight(300)
         self.outTextEdit.setMinimumWidth(600)
         vbox.addWidget(self.outTextEdit)
@@ -202,7 +159,7 @@ class MainWindow(QMainWindow):
         # Create a button and add to vin_box 2. row
         self.calcButton = QPushButton("Beregn KPI")
         self.calcButton.setMinimumHeight(30)
-        self.calcButton.setStyleSheet(f"QPushButton {{ background-color: {bg_button}; color: black; }}")
+        self.calcButton.setStyleSheet(f"QPushButton {{ background-color: {BG_BUTTON_COL}; color: black; }}")
         self.calcButton.setToolTip("Trykk for å starte KPI beregninger")
         self.calcButton .clicked.connect(self.kpi_button_clicked)
         vin_box.addWidget(self.calcButton)
@@ -239,7 +196,7 @@ class MainWindow(QMainWindow):
         self.stopDateEdit.setDisplayFormat("MM / yyyy")
         self.stopDateEdit.setMinimumWidth(120)
         self.stopDateEdit.setMinimumHeight(30)
-        self.stopDateEdit.setStyleSheet(f"QDateEdit {{ background-color: {bg_field}; color: black; }}")
+        self.stopDateEdit.setStyleSheet(f"QDateEdit {{ background-color: {BG_FIELD_COL}; color: black; }}")
         self.stopDateEdit.setToolTip("KPI beregningene starter med sluttmåned og går bakover i tid. \nAngi sluttmåned her")
         self.stopDateEdit.dateChanged.connect(self.inputChanged)
         leftCol_Form.addRow("Sluttmåned:", self.stopDateEdit)
@@ -248,7 +205,7 @@ class MainWindow(QMainWindow):
         self.aggEdit = QLineEdit()
         self.aggEdit.setMinimumWidth(80)
         self.aggEdit.setMinimumHeight(30)
-        self.aggEdit.setStyleSheet(f"QLineEdit {{ background-color: {bg_field}; color: black; }}")
+        self.aggEdit.setStyleSheet(f"QLineEdit {{ background-color: {BG_FIELD_COL}; color: black; }}")
         self.aggEdit.setText("3")
         self.aggEdit.setToolTip("Oppgi antall måneder beregningene aggregeres over\nEks, summert over et år, oppgi 12 her")
         self.aggEdit.textChanged.connect(self.inputChanged)
@@ -258,7 +215,7 @@ class MainWindow(QMainWindow):
         self.resEdit = QLineEdit()
         self.resEdit.setMinimumWidth(80)
         self.resEdit.setMinimumHeight(30)
-        self.resEdit.setStyleSheet(f"QLineEdit {{ background-color: {bg_field}; color: black; }}")
+        self.resEdit.setStyleSheet(f"QLineEdit {{ background-color: {BG_FIELD_COL}; color: black; }}")
         self.resEdit.setText("4")
         self.resEdit.setToolTip("Oppgi antall perioder å beregne for\nEks, summert per år over 2 år, oppgi 2 her")
         self.resEdit.textChanged.connect(self.inputChanged)
@@ -271,7 +228,7 @@ class MainWindow(QMainWindow):
         self.vesselCombo.setMinimumWidth(80)
         self.vesselCombo.setMinimumHeight(30)
         self.vesselCombo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.vesselCombo.setStyleSheet(f"QComboBox {{ background-color: {bg_field}; color: black; }}")
+        self.vesselCombo.setStyleSheet(f"QComboBox {{ background-color: {BG_FIELD_COL}; color: black; }}")
         self.vesselCombo.add_items(VESSEL_GROUPS, [False, False, False, False, False, True])
         self.vesselCombo.setToolTip("Velg en eller flere lengdegrupper som skal inngå i beregningene\nHvis ingen velges brukes alle")
         self.vesselCombo.currentTextChanged.connect(self.inputChanged)
@@ -282,7 +239,7 @@ class MainWindow(QMainWindow):
         self.gearCombo.setMinimumWidth(80)
         self.gearCombo.setMinimumHeight(30)
         self.gearCombo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.gearCombo.setStyleSheet(f"QComboBox {{ background-color: {bg_field}; color: black; }}")
+        self.gearCombo.setStyleSheet(f"QComboBox {{ background-color: {BG_FIELD_COL}; color: black; }}")
         self.gearCombo.add_items(GEAR_GROUPS, [False]*5 + [True] + [False]*4)
         self.gearCombo.setToolTip("Velg en eller flere redskapstyper som skal inngå i beregningene\nHvis ingen velges brukes alle")
         self.gearCombo.currentTextChanged.connect(self.inputChanged)
@@ -293,7 +250,7 @@ class MainWindow(QMainWindow):
         self.speciesCombo.setMinimumWidth(80)
         self.speciesCombo.setMinimumHeight(30)
         self.speciesCombo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.speciesCombo.setStyleSheet(f"QComboBox {{ background-color: {bg_field}; color: black; }}")
+        self.speciesCombo.setStyleSheet(f"QComboBox {{ background-color: {BG_FIELD_COL}; color: black; }}")
         self.speciesCombo.add_items(SPECIES_GROUPS)
         self.speciesCombo.setToolTip("Velg en eller flere artsgrupper som skal inngå i beregningene\nHvis ingen velges brukes alle")
         self.speciesCombo.currentTextChanged.connect(self.inputChanged)
@@ -301,7 +258,7 @@ class MainWindow(QMainWindow):
 
         ## Add catch locations 
         self.locationText = QTextEdit()
-        self.locationText.setStyleSheet(f"QTextEdit {{ background-color: {bg_field}; color: black; }}")
+        self.locationText.setStyleSheet(f"QTextEdit {{ background-color: {BG_FIELD_COL}; color: black; }}")
         self.locationText.textChanged.connect(self.inputChanged)
         leftCol_Form.addRow("Fangstfelt:", self.locationText)
 
@@ -351,6 +308,11 @@ class MainWindow(QMainWindow):
         self.dhd.setChecked(True)
         inLeftForm.addRow("", self.dhd)
 
+        # VSME KPI's
+        self.vsme = QCheckBox("VSME")
+        self.vsme.setChecked(True)
+        inLeftForm.addRow("", self.vsme)
+
 
         #----------------------------------------
         # Right form
@@ -367,46 +329,44 @@ class MainWindow(QMainWindow):
 
         # Label for right column
         self.rLabel = QLabel("Valg for Datafangst API test")
-        self.rLabel.setStyleSheet(f"QLabel {{ color: {api_text}; }}")
+        self.rLabel.setStyleSheet(f"QLabel {{ color: {API_TEXT_COL}; }}")
         inRightForm.addRow("", self.rLabel)
 
         # My vessel
         self.myVessel = QCheckBox("Mitt fartøy")
         #self.myVessel.setStyleSheet(f"QCheckBox::indicator {{ background-color: {bg_button}; color: black; }}")
-        self.myVessel.setStyleSheet(f"QCheckBox {{ color: {api_text}; }}")
+        self.myVessel.setStyleSheet(f"QCheckBox {{ color: {API_TEXT_COL}; }}")
         inRightForm.addRow("", self.myVessel)
 
         # Print API response to screen
         self.infoOutput = QCheckBox("Vis API respons", self)
-        self.infoOutput.setStyleSheet(f"QCheckBox {{ color: {api_text}; }}")
+        self.infoOutput.setStyleSheet(f"QCheckBox {{ color: {API_TEXT_COL}; }}")
         inRightForm.addRow("", self.infoOutput)
 
         # Save CSV
         self.storeCsv = QCheckBox("Lagre API-data som CSV", self)
-        self.storeCsv.setStyleSheet(f"QCheckBox {{ color: {api_text}; }}")
+        self.storeCsv.setStyleSheet(f"QCheckBox {{ color: {API_TEXT_COL}; }}")
         inRightForm.addRow("", self.storeCsv)
 
         # Append CSV
         self.appendCsv = QCheckBox("Legge til data i filen", self)
-        self.appendCsv.setStyleSheet(f"QCheckBox {{ color: {api_text}; }}")
+        self.appendCsv.setStyleSheet(f"QCheckBox {{ color: {API_TEXT_COL}; }}")
         inRightForm.addRow("", self.appendCsv)
 
         # Label for max responses
         self.respLabel = QLabel("Max antall responser")
-        self.respLabel.setStyleSheet(f"QLabel {{ color: {api_text}; }}")
+        self.respLabel.setStyleSheet(f"QLabel {{ color: {API_TEXT_COL}; }}")
         inRightForm.addRow("", self.respLabel)
 
         # Limit number of responses
         self.limitEdit = QLineEdit()
         self.limitEdit.setMinimumWidth(80)
         self.limitEdit.setMinimumHeight(30)
-        self.limitEdit.setStyleSheet(f"QLineEdit {{ background-color: {bg_field}; color: {api_text}; }}")
+        self.limitEdit.setStyleSheet(f"QLineEdit {{ background-color: {BG_FIELD_COL}; color: {API_TEXT_COL}; }}")
         self.limitEdit.setText("100")
         self.limitEdit.setToolTip("Max antall element i responsen, mellom 1-100. \nGjelder kun for 'Get Trips' \nBrukes for å begrense responsen når det er mange turer i perioden")
         #self.limitEdit.textChanged.connect(self.inputChanged)
         inRightForm.addRow("", self.limitEdit)
-
-
 
 
         # -------------------------
@@ -414,7 +374,7 @@ class MainWindow(QMainWindow):
         # -------------------------
         toolbar = QToolBar("My main toolbar")
         #toolbar.setStyleSheet("QToolBar { background-color: black; color: black; }")
-        toolbar.setStyleSheet(f"QToolBar {{ background-color: {bg_button}; color: black; }}")
+        toolbar.setStyleSheet(f"QToolBar {{ background-color: {BG_BUTTON_COL}; color: black; }}")
         #toolbar.setIconSize(QSize(16, 16))
         self.addToolBar(toolbar)
 
@@ -505,9 +465,9 @@ class MainWindow(QMainWindow):
         self.client = DatafangstClient(self)
         self.client.progress.connect(self.outTextEdit.append)
 
-    # -------------------------
-    # Change tracking
-    # -------------------------
+    # ---------------------------------
+    # Track changes in input parameters
+    # ---------------------------------
     def inputChanged(self):
         # Calculates start date from stopDate, span and periods
         self.startDate = self.stopDateEdit.date().addMonths(-(int(self.aggEdit.text())*int(self.resEdit.text())-1))
@@ -755,7 +715,8 @@ class MainWindow(QMainWindow):
             self.revenue.isChecked(),
             self.co2.isChecked(),
             self.dhd.isChecked(),
-            self.showRefG.isChecked()
+            self.vsme.isChecked(),
+            self.showRefG.isChecked()           
             )
 
         # Perform new calculations only when input parameters have changed
