@@ -8,12 +8,12 @@ The following libraries are neccessary to run the program: ``PySide6``, ``Matplo
 
 ``Main.py``                 - Initialises the application window   
 ``gui.py``                  - Sets up the graphical user interface using PySide6  
- ``gui_helpers.py``         - Overriding classes for PySide
+``gui_helpers.py``         - Overriding classes for PySide
 ``KPI.py``                  - Implements the KPI calculations and some of the endpoints from the Datafangst API  
 ``kpi_worker.py``           - Runs the KPI calculations in a separate thread  
 ``datafangst_client.py``    - Implements get requests to the Datafangst API   
 ``reports.py``              - Produces JSON and CSV files of the calculated KPI's
-```plots.py``               - Create plots of the selected KPIs
+``plots.py``                - Create plots of the selected KPIs
 ``plot_helpers.py``         - Implements the plot and specifies how it should look 
 ``utility.py``              - Includes some utiulity methods used during calculations   
 ``Endpoints.py``            - Specify the specific endpoints at Datafangst and SSB
@@ -47,6 +47,7 @@ This is a text box where you can specify the specific catch area.
 
 ### KPI check boxes
 There are several check boxes to select the type of KPI's to be calculated: 
+
 **EEOI**
 Calculates the EEOI in the periods.
 
