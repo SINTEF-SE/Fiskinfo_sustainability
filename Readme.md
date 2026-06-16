@@ -1,39 +1,105 @@
 # Sustainability_Report
 
-This python program is used to test the [API from Datafangst](https://api.dev.datafangst.orcalabs.no/swagger-ui/#/) and to produce data used to create sustainability reports. The data output is made availbale in json and xml files, and a graphs are produced to visualise the data.
+This python program is used to collect data used in sustainability reporting for the fishing fleet. It uses the [API from Datafangst](https://api.dev.datafangst.orcalabs.no/swagger-ui/#/) to produce the data, and the output is made availbale in json and xml files, and graphs are produced to visualise the data.
 
-Before running the program, ``PySide6`` and ``MatplotLib`` must be installed on the system
+The following libraries are neccessary to run the program: ``PySide6``, ``MatplotLib`` and ``Numpy``.
 
 ## Python files
 
-``Main.py``         - Initialises the application window   
-``gui.py``          - Sets up the graphical user interface using PySide6   
-``api_requests.py`` - Implements some of the available API get requests   
-``KPI.py``          - Implements the different KPIs as defined in the specification and outputs graphics, json and xml files   
-``reports.py``      - Produces reports by for different user groups by combining KPI calls   
-``utility.py``      - Includes some utiulity methods used during calculations   
+``Main.py``                 - Initialises the application window   
+``gui.py``                  - Sets up the graphical user interface using PySide6  
+ ``gui_helpers.py``         - Overriding classes for PySide
+``KPI.py``                  - Implements the KPI calculations and some of the endpoints from the Datafangst API  
+``kpi_worker.py``           - Runs the KPI calculations in a separate thread  
+``datafangst_client.py``    - Implements get requests to the Datafangst API   
+``reports.py``              - Produces JSON and CSV files of the calculated KPI's
+```plots.py``               - Create plots of the selected KPIs
+``plot_helpers.py``         - Implements the plot and specifies how it should look 
+``utility.py``              - Includes some utiulity methods used during calculations   
+``Endpoints.py``            - Specify the specific endpoints at Datafangst and SSB
+``Options.py``              - Specify options for the GUI, like colors, output files ++
 
 ## GUI
 
 The GUI is made using PySide6. There are several input parameters in the GUI:
 
-#### Input data for API calls
-**Start dato and Stopp dato:** These are used in some of the API calls, check the API documentation for which one. For KPI calculations, only the Stopp dato is used.   
-**Lengdegruppe:** This is a dropdown menu to select the specific length group used by some of the API calls.   
-**Redskapsgruppe:** This is a dropdown menu to select the specific gear group used by some of the API calls.   
-**Artsgruppe:** This is a dropdown menu to selct the specific specie group used by some of the API calls.   
-**Max antall:** Specifies the maximum number of items reported from the API call. The maximum number is 100, but can be set lower. It is used togehter with **Offset**. For instance, when requesting trips within a specific data span there may be several thousand trips, but only the first 100 will show. To get the others, use the API call repeatedly by increasing offset by 100 each time. If offset is not used, the first 100 trips will show, setting offset to 100 wil return the trips from 100-200, and so on.
+### Input data for KPI calculations
+**Sluttmåned:** 
+The end month and year for the calculations. The KPI calculations are performed up to and including this month/year.
 
-#### Input data for KPI calculations
-**Aggregert tidsperiode:** This is the number of months over which the KPI is calculated. Setting this to 3 will, for instance, calculate the EEOI over the last 3 months, where Stopp dato is the last month.   
-**Antall perioder bakover i tid fra sluttdato:** This is the number of periods in the KPI calculations. For instance, setting this to 4 will calculate EEIO for the last year, splitting it into 4 periods of 3 months each.
+**Aggregert tidsperiode:** 
+This is the aggregated number of months over which the KPI's are calculated. For instance, setting this to 12 will calculate the KPI's over the last year, ending at **Sluttmåned**.
 
-#### Other input data
-**Vis resultat:** This will print out the data returned by the API call. Not recommended if there are many items returned.   
-**Mitt fartøy:** This will return data from my vessel only, for API calls that support this. See below for more information.   
+**Antall perioder bakover i tid fra sluttdato:** 
+This is the number of periods in the KPI calculations. For instance, if **Aggregert tidsperiode** is 12, setting this to 3 will calculate the KPI's for the last 3 years.
+
+**Lengdegruppe:** 
+This is a dropdown menu to select the specific vessel length group. More than one can be selected.
+
+**Redskapsgruppe:** 
+This is a dropdown menu to select the specific gear group. More than one can be selected. 
+
+**Artsgruppe:** 
+This is a dropdown menu to select the specific specie group. More than one can be selected. 
+
+**Fangstfelt:** 
+This is a text box where you can specify the specific catch area.
+
+### KPI check boxes
+There are several check boxes to select the type of KPI's to be calculated: 
+**EEOI**
+Calculates the EEOI in the periods.
+
+**FUI** 
+Calculates FUI in the period.
+
+**Fangst og fangstverdi** 
+Calculates the total catch and catch value in the period, as well as the average catch and catch value per trip.
+
+**Drivstofforbruk**
+Calculates the total fuel in the period and the average fuel per trip
+
+**Drivstoffkostnad**
+Calculates the total fuel costs in the periods, and the average costs per trip.
+
+**Relativ fortjeneste** 
+Calculates the average profit per kg catch and the average profit per hour in the period.
+
+**CO2 utslipp** 
+Calculates the total emitted CO2 in the period, the average CO2 per trip.
+
+**Dager, timer, distanse** 
+Calculates the average number of days and distance per trip.
+
+**VSME**                    - 
+Calculates the emitted CO2 per revenue as specified by VSME.
+
+**Vis data for referansegruppe**
+Check this if the data for a reference group shall be included in the reports.
+
+### Data for testing the API endpoints
+
+**Mitt fartøy**
+Check this if you want data only for my vessel, otherwise you will get data for all vessels in the selected lenght- and gear groups
+
+**Vis API respons**
+Check this if you want to print out the complete response from the API call (may be a lot of data)
+
+**Lagre API-data som CSV**
+Not used
+
+**Legge til data i filen** 
+Not used
+
+**Max antall responser**
+Specifies the maximum number of items reported from the API call, default is 100, can be smaller but not higher.
+
+## Output data
+All produced data in terms of .png figures, JSON files and CSV files, and a PDF file with all .png figures collected, are stored in the output directory specified in ``Options.py``.
 
 ## Other information
 
-So far, authorisation is not implemented and used. To specify my vessel, you need to hard code the vessels ID into the ``api_requests.py``. The identifier is called ``fiskdirId`` and is a 9 digit number. At the moment, only the Id of Gadus Njord is used.
+The textbox will show the progress of the KPI calculations, and the output from API calls. 
+So far, authorisation is not implemented and used. To specify my vessel, at the moment you need to hard code the vessels ID into the ``Options.py``. The identifier is called ``fiskdirId`` and is a 9 digit number. This is also true if you want to specify a specific reference group of vessels. The plan is to implement this selection into the GUI in the future.
 
-Debug printing: At the top of ``api_requests.py``, a parameter called ``printout`` is is used to tell if debug parameters should be printed out. Set to *false* if this is not neccessary, it will speed up the program. The debug output mainly shows the API calls and the parameters used in the calls.
+
